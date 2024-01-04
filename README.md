@@ -18,17 +18,15 @@ Ada banyak sekali ekosistem di spring data, misalnya :
 
 Untuk lebih detail nya bisa kunjungi disini https://spring.io/projects/spring-data/  
   
-Penggunaan teknologi di ekosistem spring data cukup general, jadi sekali kita belajar salahsatu ekosistem nya misalnya Spring data JPA maka jikalau kita ingin menggunakan ekosistem yang lain misalnya Spring Data Elasticsearch maka akan sangat mudah.  
+Penggunaan teknologi di ekosistem spring data cukup general, jadi sekali kita belajar salah satu ekosistem nya misalnya Spring data JPA maka jikalau kita ingin menggunakan ekosistem yang lain misalnya Spring Data Elasticsearch maka akan sangat mudah.  
 Karena secara garis besar konsep dan penggunaanya sama.
 
-Spring data jpa adalah sebuah bagian dari ekosistem Spring data project untuk mempermudah pengolahan data pada database menggunakan JPA. 
+Spring data JPA adalah sebuah bagian dari ekosistem Spring data project untuk mempermudah pengolahan data pada database menggunakan JPA. 
  
-Dengan menggunakan Sring data jpa Kita tidak perlu membuat query dan sebagainya secara manual, untuk detail dari spring data jpa bisa kunjungi disini https://spring.io/projects/spring-data-jpa/
-  
-
+Dengan menggunakan Spring Data JPA Kita tidak perlu membuat query dan sebagainya secara manual, untuk detail dari spring data jpa bisa kunjungi disini https://spring.io/projects/spring-data-jpa/
 
 # Setup Project
-Kalien bisa download spring project di https://start.spring.io/ dengan dependency sebagai berikut :
+Kalian bisa download spring project di https://start.spring.io/ dengan dependency sebagai berikut :
 * Spring Data Jpa
 * JDBC
 * Bean Validation
