@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    # untuk menentukan driver yang digunakan
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: secret_pass
+    url: jdbc:mysql://localhost:3306/spring_data_jpa
+    # untuk menentukan database pooling yang digunakan
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 8
+      maximum-pool-size: 15 
+# Konfigurasi Jpa
+  jpa:
+    properties:
+      hibernate:
+        show-sql: true
+        format-sql: true
