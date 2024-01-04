@@ -33,6 +33,7 @@ Kalian bisa download spring project di https://start.spring.io/ dengan dependenc
 * Spring Web
 * Lombok
 * Mysql Driver
+* SpringBoot dev tools
 
 Untuk databasenya, disini saya akan mengunakan docker compose :  
 ``` yaml
@@ -68,4 +69,85 @@ setelah itu masukan password kalian (sesuai dengan password pada environtment di
 CREATE DATABASE spring_data_jpa;
 ```
 
-# 
+# DataSorce config
+Saat kita menggunakan SpringBoot atau Spring framework, kita tidak perlu lagi melakukan konfigurasi DataSource secara manual, misalnya :
+* membuat class connection untuk membuat koneksi
+* membuat persistance.xml untuk melakukan konfigurasi
+* menginstansiasi EntityManagerFactory
+* dan sebagainya
+
+By default sudah dikonfigurasikan oleh spring famework menggunakan class [`DataSourceAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/jdbc/DataSourceAutoConfiguration.html), dan untuk melakukan konfigurasi database kita kita tinggal menggunakan `application.properties` atau `application.yaml` saja dengan prefix `spring.datasource`  
+``` yaml
+spring:
+  datasource:
+    # untuk menentukan driver yang digunakan
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: secret_pass
+    url: jdbc:mysql://localhost:3306/spring_data_jpa
+    # untuk menentukan database pooling yang digunakan
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 8
+      maximum-pool-size: 15 
+```
+Untuk detail konfigurasinya bisa kunjungin disini https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#application-properties.data.spring.datasource.dbcp2
+
+
+# Jpa Configuration
+untuk melakukan konfigurasi JPA, misalnya menampilkan sql, format sql, dan sebagainya kita tidak perlu lagi menggunakan `persistence.xml`.  
+Kita bisa menggunakan `application.properties` atau `application.yaml` untuk melakukan konfigurasi jpa nya dengan prefix `spring.jpa`
+
+``` yaml
+spring:
+  datasource:
+    # untuk menentukan driver yang digunakan
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: secret_pass
+    url: jdbc:mysql://localhost:3306/spring_data_jpa
+    # untuk menentukan database pooling yang digunakan
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 8
+      maximum-pool-size: 15 
+# Konfigurasi Jpa
+  jpa:
+    properties:
+      hibernate:
+        show-sql: true
+        format-sql: true
+```
+
+# EntityManagerFactory
+EntityManagerFactory adalah sebuah object yang digunakan untuk berinteraksi dengan database, misalnya untuk melakukan :
+* CRUD
+* TRANSACTION
+* CRITERIA QUERY
+* dan sebagainya
+
+Saat kita menggunakan JPA secara manual maka kita akan melakukan konfigurasi EntityManagerFactory secara manual juga, namun ketika kita menggunakan Spring Data Jpa maka kita tidak perlu melakukan konfigurasi secara manual, karena semuanya telah otomatis dikonfigurasikan oleh spring data jpa dengan menggunakan [`JpaHibernateAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaAutoConfiguration.html)
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class SpringDataJpaApplicationTests {
+
+    /**
+     * Jika kita membutuhkan EntityManagerFactory, disini kita bisa langsung
+     * melakukan injection menggunakan @Autowired atau constructor injection dsb
+     * karena EntityManagerFactory telah di buatkan dan di registrasikan sebagai
+     * Spring Bean.
+     * */
+	private @Autowired EntityManagerFactory entityManagerFactory;
+
+	@Test
+	public void testEntityManager(){
+		Assertions.assertNotNull(entityManagerFactory);
+		EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+		Assertions.assertNotNull(entityManager);
+		EntityTransaction transaction = entityManager.getTransaction();
+		Assertions.assertNotNull(transaction);
+		entityManager.close();
+	}
+}
+```
