@@ -1,0 +1,13 @@
+version: '1.9'
+services:
+  mysql:
+    image: mysql:latest
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret_pass
+      - MYSQL_DATABASE=spring_data_jpa
+    volumes:
+      - mysql_volume:/var/lib/mysql
+volumes:
+  mysql_volume: {}
