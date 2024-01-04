@@ -18,15 +18,15 @@ Ada banyak sekali ekosistem di spring data, misalnya :
 
 Untuk lebih detail nya bisa kunjungi disini https://spring.io/projects/spring-data/  
   
-Penggunaan teknologi di ekosistem spring data cukup general, jadi sekali kita belajar salah satu ekosistem nya misalnya Spring data JPA maka jikalau kita ingin menggunakan ekosistem yang lain misalnya Spring Data Elasticsearch maka akan sangat mudah.  
+Penggunaan teknologi di ekosistem spring data cukup general, jadi sekali mempelajari salah satu ekosistem nya misalnya Spring data JPA maka saat kita ingin menggunakan ekosistem yang lain misalnya Spring Data Elasticsearch maka akan sangat mudah.  
 Karena secara garis besar konsep dan penggunaanya sama.
 
 Spring data JPA adalah sebuah bagian dari ekosistem Spring data project untuk mempermudah pengolahan data pada database menggunakan JPA. 
  
-Dengan menggunakan Spring Data JPA Kita tidak perlu membuat query dan sebagainya secara manual, untuk detail dari spring data jpa bisa kunjungi disini https://spring.io/projects/spring-data-jpa/
+Dengan menggunakan Spring Data JPA Kita tidak perlu melakukan konfigurasi DataSource, JPA secara manual dan tentunya mempermudah untuk berkomunikasi dengan sistem basis data, untuk detail dari spring data jpa bisa kunjungi disini https://spring.io/projects/spring-data-jpa/
 
 # Setup Project
-Kalian bisa download spring project di https://start.spring.io/ dengan dependency sebagai berikut :
+Kalian bisa download spring project di https://start.spring.io/ dengan menambahkan dependency sebagai berikut :
 * Spring Data Jpa
 * JDBC
 * Bean Validation
@@ -51,12 +51,12 @@ volumes:
   mysql_volume: {}
 ```
 
-Untuk menjalankanya jalankan perintah :
+Untuk menjalankanya, jalankan perintah :
 ``` sh
 docker compose -f docker-compose.yaml up -d
 ```
   
-Setelah itu mari kita buatkan databasenya terlebih dahulu :
+Membuat Database :
 ``` sh
 docker exec -it spring-data-jpa-mysql-1 /bin/bash
 ```
@@ -70,13 +70,13 @@ CREATE DATABASE spring_data_jpa;
 ```
 
 # DataSorce config
-Saat kita menggunakan SpringBoot atau Spring framework, kita tidak perlu lagi melakukan konfigurasi DataSource secara manual, misalnya :
+Saat menggunakan SpringBoot atau Spring framework, kita tidak perlu lagi melakukan konfigurasi DataSource secara manual, misalnya :
 * membuat class connection untuk membuat koneksi
-* membuat persistance.xml untuk melakukan konfigurasi
+* membuat persistance.xml untuk melakukan konfigurasi jpa
 * menginstansiasi EntityManagerFactory
 * dan sebagainya
 
-By default sudah dikonfigurasikan oleh spring famework menggunakan class [`DataSourceAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/jdbc/DataSourceAutoConfiguration.html), dan untuk melakukan konfigurasi database kita kita tinggal menggunakan `application.properties` atau `application.yaml` saja dengan prefix `spring.datasource`  
+By default sudah dikonfigurasikan oleh spring famework menggunakan class [`DataSourceAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/jdbc/DataSourceAutoConfiguration.html), dan untuk melakukan konfigurasi database kita bisa menggunakan `application.properties` atau `application.yaml` saja dengan prefix `spring.datasource`  
 ``` yaml
 spring:
   datasource:
@@ -126,7 +126,7 @@ EntityManagerFactory adalah sebuah object yang digunakan untuk berinteraksi deng
 * CRITERIA QUERY
 * dan sebagainya
 
-Saat kita menggunakan JPA secara manual maka kita akan melakukan konfigurasi EntityManagerFactory secara manual juga, namun ketika kita menggunakan Spring Data Jpa maka kita tidak perlu melakukan konfigurasi secara manual, karena semuanya telah otomatis dikonfigurasikan oleh spring data jpa dengan menggunakan [`JpaHibernateAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaAutoConfiguration.html)
+Saat kita menggunakan JPA secara manual maka kita akan melakukan konfigurasi EntityManagerFactory secara manual juga, namun ketika kita menggunakan Spring Data Jpa maka  tidak perlu lagi melakukan konfigurasi secara manual, karena semuanya telah otomatis dikonfigurasikan oleh spring data jpa dengan menggunakan [`JpaHibernateAutoConfiguration`](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaAutoConfiguration.html)
 
 ``` java
 @SpringBootTest(classes = SpringDataJpaApplication.class)
