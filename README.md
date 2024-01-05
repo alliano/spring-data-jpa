@@ -212,7 +212,36 @@ public class User implements Serializable {
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> { }
 ```
-**NOTE:** *Type Generic pada `JpaRepository` dan sebagainya adalah : E yang artinya **Entity** dan ID yang artinya **Id primarykey entity nya***
+>**NOTE:** *Type Generic pada `JpaRepository` dan sebagainya adalah : E yang artinya **Entity** dan ID yang artinya **Id primarykey entity nya***
 
+[`JpaRepository<E, ID>`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaRepository.html) adalah interface turunan dari [`ListCrudRepository<E, ID>`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/ListCrudRepository.html), [`PagingAndSortingRepository<E, ID>`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.htmlk), Iterface tersebut memiliki banyak sekali method misalnya untuk operasi CRUD dan sebagainya.  
+  
+Ketika kita menggunakan layer Repository kita tidak perlu menggunakan `EtityManager` secara langsung untuk melakukan operasi CRUD, melainkan cukup menggunakan method yang disediakan oleh interface-interface Repository. Misalnya ketika kita ingin melakukan insert data, maka kita bisa menggunakan method `save(entity)`.  
+  
+> **NOTE:** *method `save(entity)` digunakan untuk insert dan update*
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserRepositoryTest {
+    
+    /**
+     * Disini kita bisa secara langsung menginject
+     * UserRepository secara langsung, karena telah di registrasikan
+     * menjadi spring bean,
+     * 
+     * jadi semua interface yang meng extend interface repository maka secara
+     * otomatis dijadikan spring bean
+     * */
+    private @Autowired UserRepository userRepository;
 
+    @Test
+    public void testInsert(){
+        User user = User.builder()
+                    .username("Abdillah")
+                    .password("secret_pass")
+                    .build();
+        // melakukan insert data
+        this.userRepository.save(user);
+    }
+}
+```
 
