@@ -113,10 +113,9 @@ spring:
       maximum-pool-size: 15 
 # Konfigurasi Jpa
   jpa:
+    show-sql: true
     properties:
-      hibernate:
-        show-sql: true
-        format-sql: true
+      '[format-sql]': true
 ```
 
 # EntityManagerFactory
@@ -151,3 +150,69 @@ public class SpringDataJpaApplicationTests {
 	}
 }
 ```
+# Repository
+Saat menggunakan Spring Data JPA, kita akan jarang sekali menggunakan secara langsung `EntityManagerFactory` bahkan mungkin tidak akan pernah menggunakanya secara langsung.  
+Lantas bagaimana cara kita berinteraksi dengan database ??  
+Spring Data JPA menganut konsep DDD(Domain Driven Design) pada konsep DDD ini ketika kita ingin berinteraksi dengan database maka kita akan menggunakan layer Repository.  
+  
+Sebenarnya didalam layer Repository memuat EntityManager. Jadi layer repository ini hadir untuk mempermudah kita ketika berinteraksi dengan database, sehingga kita tidak perlu lagi memikirkan kekompleksitasan `EntityManagerFactory`  
+  
+Kode sebelum menggunakan Repository 
+``` java
+public void save(Payment payment) {
+    EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+    EntityTransaction transaction = entityManager.getTransaction();
+    transaction.begin();
+    entityManager.persist(payment);
+    transaction.commit();
+}
+```
+
+kode setelah menggunakan repository :
+``` java
+public void save(Payment payment);
+```
+
+Untuk membuat Repository cukuplah mudah, cukup membuat interface yang mengextend salahsatu interface berikut :
+* [JPaRepository\<E, ID>](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaRepository.html)
+* [CrudRepository\<E, ID>](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html)
+* [ListCrudRepository\<E, ID>](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/ListCrudRepository.html)
+* [PagingAndSortingRepository\<E, ID>](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.htmlk)
+
+Setelah itu kita bisa menambahkan annotation [@Repository](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html) pada interface nya.  
+  
+Sebelum kita membuat repository, pastikan kita telah memiliki Entity nya terlebih dahulu.  
+Misalnya disini kita akan membuat `UserRepository` maka pastikan kita telah memiliki User entity.  
+``` sql
+CREATE TABLE users(
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(100) NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    PRIMARY KEY(id)
+)ENGINE=InnoDb;
+```
+
+``` java
+@Builder @Entity @Table(name = "users")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class User implements Serializable {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+}
+```
+
+``` java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> { }
+```
+**NOTE:** *Type Generic pada `JpaRepository` dan sebagainya adalah : E yang artinya **Entity** dan ID yang artinya **Id primarykey entity nya***
+
+
+
