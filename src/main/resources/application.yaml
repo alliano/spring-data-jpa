@@ -12,7 +12,12 @@ spring:
       maximum-pool-size: 15 
 # Konfigurasi Jpa
   jpa:
+    show-sql: true
     properties:
-      hibernate:
-        show-sql: true
-        format-sql: true
+      '[format-sql]': true
+
+# logging:
+#   level:
+#     org:
+#       hibernate:
+#         SQL: DEBUG
