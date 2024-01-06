@@ -244,10 +244,3 @@ public class UserRepositoryTest {
     }
 }
 ```
-
-
-
-
-
-
-
