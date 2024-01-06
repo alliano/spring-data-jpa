@@ -260,6 +260,8 @@ Cara diatas adalah cara melakukan transaction secara manual, tentunya agak ribet
 Saat kita menggunakan Spring Data JPA, jika kita ingin melakukan transaction kita tidak perlu lagi melakukan cara seperti itu. Spring Data JPA menyediakan annotation [`@Transactional`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html) untuk melakukan transaction.  
   
 Cara kerja Annotation `@Transactional` adalah menggunakan Spring AOP, jadi ketika method yang di annotation dengan `@Transactional` maka ketika method tersebut diakses dari object luar/Object lain maka transaction tersebut akan dijalankan(melakukan commit atau rollback secara otomatis)  
+![cross_aop](/src/main/resources/images/cross_aop.png)
+
 
 ``` java
 @Service @AllArgsConstructor
@@ -309,6 +311,7 @@ public class UserServiceTest {
 Perlu diketahui bahwa Spring AOP hanya bekerja ketika ada object luar yang mentriger obejct yang memiliki annotation yang dimanage AOP.  
   
 jika Obejct yang dimanage oleh Spiring AOP diakses dengan method nya sendiri maka Spring AOP tidak akan bekerja. Hal tersebut berlaku juga ketika kita menggunakan annotation `@Transactional` karena annotation tersebut dimanage oleh Spirng AOP
+![non_cross_aop](./src/main/resources/images/non_cross_aop.png)
 ``` java
 @Service @AllArgsConstructor
 public class UserService {
