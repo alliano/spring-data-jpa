@@ -244,3 +244,123 @@ public class UserRepositoryTest {
     }
 }
 ```
+
+# Declarative Transaction
+Ketika menggunakan JPA, saat kita ingin melakukan transaction maka kita akan melakukan seperti berikut ini :
+``` java
+EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+Transaction transaction = entityManager.getTransaction();
+transaction.begin();
+// operasi CRUD
+
+transaction.commit();
+```
+Cara diatas adalah cara melakukan transaction secara manual, tentunya agak ribet karena kita harus menghandle secara manual unutk commit dan rollback nya.  
+  
+Saat kita menggunakan Spring Data JPA, jika kita ingin melakukan transaction kita tidak perlu lagi melakukan cara seperti itu. Spring Data JPA menyediakan annotation [`@Transactional`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html) untuk melakukan transaction.  
+  
+Cara kerja Annotation `@Transactional` adalah menggunakan Spring AOP, jadi ketika method yang di annotation dengan `@Transactional` maka ketika method tersebut diakses dari object luar/Object lain maka transaction tersebut akan dijalankan(melakukan commit atau rollback secara otomatis)  
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional
+    public void create() {
+        User user = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .build();
+
+        User user1 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .build();
+        User user2 = User.builder()
+                    .username("Nabila")
+                    .password("secret")
+                    .build();
+        List<User> userList = new ArrayList<>(List.of(user, user1, user2));
+        userList.forEach(u -> {
+            this.userRepository.save(u);
+        });
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void testIsert(){
+        Assertions.assertThrows(ResponseStatusException.class, () -> {
+            // akan melakukan rollback secara otomatis
+            this.userService.create();
+        });
+    }
+}
+```
+Perlu diketahui bahwa Spring AOP hanya bekerja ketika ada object luar yang mentriger obejct yang memiliki annotation yang dimanage AOP.  
+  
+jika Obejct yang dimanage oleh Spiring AOP diakses dengan method nya sendiri maka Spring AOP tidak akan bekerja. Hal tersebut berlaku juga ketika kita menggunakan annotation `@Transactional` karena annotation tersebut dimanage oleh Spirng AOP
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional
+    public void create() {
+        User user = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .build();
+
+        User user1 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .build();
+        User user2 = User.builder()
+                    .username("Nabila")
+                    .password("secret")
+                    .build();
+        List<User> userList = new ArrayList<>(List.of(user, user1, user2));
+        userList.forEach(u -> {
+            this.userRepository.save(u);
+        });
+
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
+    }
+
+    // Ketika method ini memanggila method create(); maka transaction tidak akan dijalankan
+    // karena annotation @Transaction hanya bekerja ketika method create() diakses oleh object lain(diakses oleh luar Object)
+    public void call() {
+        create();
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void testInsertFail(){
+        Assertions.assertThrows(ResponseStatusException.class, () -> {
+          /**
+           * ketika method call(); dipanggil
+           * transaction tidak akan dijalankan
+           * */
+            this.userService.call();
+        });
+    }
+}
+```
