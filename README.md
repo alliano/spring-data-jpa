@@ -506,3 +506,107 @@ public class UserServiceTest {
     }
 }
 ```
+
+# TransactionOperation
+Kita telah mengetahui cara melakukan transaction denga cara Declatarive Transaction menggunakan annotation `@Transactional`, namun di case tertentu kita butuh melakukan transaction secara manual, misalnya ketika kode kita berjalan secara multi threding atau Asyncronus.  
+  
+Mungkin teman-teman berfikir *"Kalo gitu pake aja `EntityManager` terus pake method `getTransaction()` untuk dapetion object transaction.... nah abis itu pake transaction nya secara manual"*  
+``` java
+public void create() {
+    EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+    Transaction transaction = entityManager.getTransaction();
+    transaction.begin();
+    // OPERASI CURD
+
+    transaction.commit()
+}
+```
+  
+Hal tersebut dapat kita lakukan, namun daripada menggunakan cara manual seperti diatas lebih baik menggunakan cara prohrammatic denga menggunakan [`TransactionOperation`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/support/TransactionOperations.html) atau [`TransactionTemplate`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/support/TransactionTemplate.html) atau menggunakan cara yang low level dengan menggunakan [`PlatformTransactionManager`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/PlatformTransactionManager.html). Kita bisa mengguankan nya langsung kedua object tersebut karena sudah Diregistrasikan sebagai Bean oleh Spring.  
+
+Untuk melakukan transaction nya kita bisa menggunakan method `execute()` jika method mengembalikan result, namin jika mehtod tida megembalikan result maka bisa menggunakan method `executeWithoutResult()`.  
+Untuk lebih detailnya bisa kunjungi disini https://docs.spring.io/spring-framework/docs/4.2.x/spring-framework-reference/html/transaction.html#transaction-programmatic
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    private final TransactionOperations transactionOperations;
+
+    public void updateUser() {
+        this.transactionOperations.executeWithoutResult(transaction -> {
+            User user = this.userRepository.findById(12L).orElse(null);
+            user.setUsername("AOWAOKWOAKWAOK");
+            this.userRepository.save(user);
+            throw new RuntimeException("Someting error");
+        });
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void programmaticTransactionTest(){
+        Assertions.assertThrows(RuntimeException.class, () -> userService.updateUser());
+    }
+}
+```
+  
+# PlatformTransactionManager
+Jika kita ingin melakukan transaction secara low level, tidak disarankan menggunakan `EnitytManager` secara langsung, lebih baik menggunakan [`PlatformTransactionManager`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/PlatformTransactionManager.html). Cara penggunaanya cukup mirip seperti menggunakan `EntityManager`.  
+Kita bisa langsung menggunakan `PlatformTransactionManager` karena spring secara otomatis telah meregistrasikanya menjadi Spring Bean.
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    private final PlatformTransactionManager platformTransactionManager;
+
+    public void manualTransaction() {
+        // ini bisa kita asumsikan sebagai konfigurasi transaction
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
+        definition.setTimeout(5);
+        definition.setReadOnly(false);
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus transaction = this.platformTransactionManager.getTransaction(definition);
+
+        try {
+            Payment payment = Payment.builder()
+                            .reciver("Abdillah")
+                            .amount(40.000d)
+                            .date(new Date())
+                            .build();
+            this.paymentRepository.save(payment);
+            // disini terjadi throw error maka akan melakukan rollback
+            error();
+            this.platformTransactionManager.commit(transaction);
+        } catch (Exception e) {
+            this.platformTransactionManager.rollback(transaction);
+        }
+    }
+    
+    public void error() throws SQLException {
+        throw new SQLException("Something error");
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    @Test
+    public void testPlatformTransactionMaager(){
+        this.paymentService.manualTransaction();
+    }
+}
+```
