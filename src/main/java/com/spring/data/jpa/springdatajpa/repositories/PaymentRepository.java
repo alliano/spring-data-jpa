@@ -1,23 +1,11 @@
 package com.spring.data.jpa.springdatajpa.repositories;
 
 
-import com.spring.data.jpa.springdatajpa.models.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.EntityTransaction;
-import lombok.AllArgsConstructor;
+import com.spring.data.jpa.springdatajpa.entities.Payment;
 
-@AllArgsConstructor
-public class PaymentRepository {
 
-    private final EntityManagerFactory entityManagerFactory;
-
-    public void save(Payment payment) {
-       EntityManager entityManager = this.entityManagerFactory.createEntityManager();
-       EntityTransaction transaction = entityManager.getTransaction();
-       transaction.begin();
-       entityManager.persist(payment);
-       transaction.commit();
-    }
-}
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { }
