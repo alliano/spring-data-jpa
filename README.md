@@ -367,3 +367,31 @@ public class UserServiceTest {
     }
 }
 ```
+  
+Saat menggunakan annotation `@Transactional` kita bisa menambahkan beberapa pengaturan, misalnya :
+| Pengaturan  | Default Value | Deskripsi
+|-------------|---------------|---------------------
+| readOnly    | false         | Jika transaction tidak mengubah data samasekali
+| timeout     | -1            | Membatasi lama transaction
+| propagation | REQUIRED      | Membuat transaction jika belum ada dan tidak membuat transaction jika sudah ada
+
+dan masih banyak lagi, untuk lebih detailny abisa kunjungi disini https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public List<User> getUserts() {
+        // ini tidak melakukan perubahan data sama sekali, maka kita busa gunakan
+        // aturan readOnly = true
+        return this.userRepository.findAll();
+    }
+}
+```
+
+# Transaction Propagation
+
+
