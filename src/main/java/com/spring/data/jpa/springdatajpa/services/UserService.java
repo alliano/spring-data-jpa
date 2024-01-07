@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,6 +24,8 @@ public class UserService {
     private final UserRepository userRepository;
 
     private final PaymentService paymentService;
+
+    private final TransactionOperations transactionOperations;
 
     @Transactional
     public void create() {
@@ -69,5 +72,14 @@ public class UserService {
     @Transactional
     public void userTranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
         this.paymentService.tranfer(request);
+    }
+
+    public void updateUser() {
+        this.transactionOperations.executeWithoutResult(transaction -> {
+            User user = this.userRepository.findById(12L).orElse(null);
+            user.setUsername("AOWAOKWOAKWAOK");
+            this.userRepository.save(user);
+            throw new RuntimeException("Someting error");
+        });
     }
 }

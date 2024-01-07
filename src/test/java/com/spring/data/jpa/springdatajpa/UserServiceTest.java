@@ -62,4 +62,9 @@ public class UserServiceTest {
             this.paymentService.tranfer(paymentRequest);
         });
     }
+
+    @Test
+    public void programmaticTransactionTest(){
+        Assertions.assertThrows(RuntimeException.class, () -> userService.updateUser());
+    }
 }
