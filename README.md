@@ -310,7 +310,7 @@ public class UserServiceTest {
 ```
 Perlu diketahui bahwa Spring AOP hanya bekerja ketika ada object luar yang mentriger obejct yang memiliki annotation yang dimanage AOP.  
   
-jika Obejct yang dimanage oleh Spiring AOP diakses dengan method nya sendiri maka Spring AOP tidak akan bekerja. Hal tersebut berlaku juga ketika kita menggunakan annotation `@Transactional` karena annotation tersebut dimanage oleh Spirng AOP
+jika Obejct yang dimanage oleh Spiring AOP diakses dengan method nya sendiri maka Spring AOP tidak akan bekerja. Hal tersebut berlaku juga ketika kita menggunakan annotation `@Transactional` karena annotation tersebut dimanage oleh Spirng AOP  
 ![non_cross_aop](./src/main/resources/images/non_cross_aop.png)
 ``` java
 @Service @AllArgsConstructor
