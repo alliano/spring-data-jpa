@@ -383,15 +383,126 @@ public class UserService {
     
     private final UserRepository userRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRED)
     public List<User> getUserts() {
-        // ini tidak melakukan perubahan data sama sekali, maka kita busa gunakan
-        // aturan readOnly = true
+        /**
+        * ini tidak melakukan perubahan data sama sekali, maka kita busa gunakan
+        * aturan readOnly = true
+        *
+        * Propagation.REQUIRED(default value)
+        **/
         return this.userRepository.findAll();
     }
 }
 ```
 
 # Transaction Propagation
+Sebelumnya kita telah menyinggung tentang pengaturan propagattion yang ada pada annotation `@Transactional`.  
+Transaction propagation digunakan ketika transaction yang sedang berjalan mengakses transaction lain, misalnya ketika method transaction pada `UserService` memanggil method transaction pada `PaymentService`.  
+Ada banyak sekali pengaturan yang bisa kita gunakan pada transaction propagation, diantaranya yaitu
+| Propagation   | Deskripsi 
+|---------------|-----------
+| REQUIRED      | Membuat transaction jika transaction belum dibuat
+| MANDATORY     | Transaction harus diakses oleh transaction lain
+| NEVER         | Tidak melakukan transaction
+
+Dan masih banyak lagi, untuk lebih detail nya bisa kunjungi disini https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html
 
 
+``` java
+@Entity @Table(name = "payments")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor @Builder
+public class Payment implements Serializable {
+    
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+
+    private String reciver;
+
+    private Date date;
+
+    private Double amount;
+}
+```
+
+``` java
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { }
+```
+
+``` java
+@Builder
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class PaymentRequest implements Serializable {
+    
+    private String id;
+
+    private String reciver;
+
+    private Double amount;
+}
+```
+
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    private final ObjectMapper objectMapper;
+    
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void tranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
+        Payment payment = this.objectMapper.readValue(this.objectMapper.writeValueAsString(request), Payment.class);
+        payment.setDate(new Date());
+        this.paymentRepository.save(payment);
+    }
+}
+```
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    private final PaymentService paymentService;
+
+    @Transactional
+    public void userTranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
+        this.paymentService.tranfer(request);
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    private @Autowired PaymentService paymentService;
+
+    @Test
+    public void testPropagationSuccess() throws JsonMappingException, JsonProcessingException{
+        PaymentRequest paymentRequest = PaymentRequest.builder()
+                    .amount(10.0000d)
+                    .reciver("Alli")
+                    .build();
+        Assertions.assertDoesNotThrow(() -> {
+            this.userService.userTranfer(paymentRequest);
+        });
+    }
+
+    @Test
+    public void testFailPropagation() throws JsonMappingException, JsonProcessingException {
+        Assertions.assertThrows(IllegalTransactionStateException.class, () -> {
+            PaymentRequest paymentRequest = PaymentRequest.builder()
+                            .reciver("Nero")
+                            .amount(30.000d)
+                            .build();
+            this.paymentService.tranfer(paymentRequest);
+        });
+    }
+}
+```
