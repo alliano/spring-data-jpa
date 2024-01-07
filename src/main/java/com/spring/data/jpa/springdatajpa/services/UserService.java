@@ -55,4 +55,9 @@ public class UserService {
         this.userRepository.save(user);
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
     }
+
+    @Transactional(readOnly = true)
+    public List<User> getUserts() {
+        return this.userRepository.findAll();
+    }
 }
