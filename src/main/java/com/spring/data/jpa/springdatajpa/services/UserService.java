@@ -9,7 +9,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.spring.data.jpa.springdatajpa.entities.User;
+import com.spring.data.jpa.springdatajpa.models.PaymentRequest;
 import com.spring.data.jpa.springdatajpa.repositories.UserRepository;
 
 import lombok.AllArgsConstructor;
@@ -18,6 +21,8 @@ import lombok.AllArgsConstructor;
 public class UserService {
     
     private final UserRepository userRepository;
+
+    private final PaymentService paymentService;
 
     @Transactional
     public void create() {
@@ -56,8 +61,13 @@ public class UserService {
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRED)
     public List<User> getUserts() {
         return this.userRepository.findAll();
+    }
+
+    @Transactional
+    public void userTranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
+        this.paymentService.tranfer(request);
     }
 }
