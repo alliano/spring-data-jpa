@@ -2,6 +2,7 @@ package com.spring.data.jpa.springdatajpa.services;
 
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -59,5 +60,10 @@ public class PaymentService {
 
     public void error() throws SQLException {
         throw new SQLException("Something error");
+    }
+
+    @Transactional(readOnly = true)
+    public List<Payment> findByreciver(String reciver) {
+        return this.paymentRepository.findByReciverOrderByDateDesc(reciver);
     }
 }

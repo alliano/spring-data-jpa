@@ -82,4 +82,9 @@ public class UserService {
             throw new RuntimeException("Someting error");
         });
     }
+
+    @Transactional(readOnly = true)
+    public User namedQuery(String username) {
+        return this.userRepository.findByUsernameEquals(username).orElse(null);
+    }
 }
