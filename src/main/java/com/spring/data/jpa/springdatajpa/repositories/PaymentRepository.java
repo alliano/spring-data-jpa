@@ -13,10 +13,12 @@ import com.spring.data.jpa.springdatajpa.entities.Payment;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, String> { 
 
-    public Optional<Payment> findAllByReciver(String reciver);
+    // menampilkan semua reciver berdasarkan nama reciver
+    public Optional<Payment> findByReciver(String reciver);
 
+    // menampilkan amound yang lebih besar
     public List<Payment> findByAmountGreaterThan(Double amount);
 
+    // menampilkan data berdasarkan nama reciver dan diurutkan DESC
     public List<Payment> findByReciverOrderByDateDesc(String reciver);
-
 }
