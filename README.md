@@ -610,3 +610,79 @@ public class PaymetServiceTest {
     }
 }
 ```
+
+# Query Method
+Untuk melakukan Query biasanya kita akan menggunakan `EntityManager` dengan JPAQL
+``` java
+EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+Transaction transaction = entityManager.getTransaction();
+transaction.begin();
+Payment payment = this.objectManpper.readValue(this.objectMapper.writeValueAsString(paymentRequest), Payment.class);
+// melakukan query insert
+entityManager.persist(payment);
+transaction.commit();
+```
+
+Namun, ketika kita menggunakan layer Repository kita tidak perlu melakukanya seperti contoh diatas. Spring Data Jpa memiliki fitur Query Method. Query Method pada Spring Data Jpa memungkinkan kita untuk membuat query berdasarkan nama method nya, misalnya `findById(id)`, `findByNameEquals(name)`, `findByUsernameNotLike(username)` dan sebagainya.  
+  
+Spring Data akan secara otomatis akan melakukan translet/menterjemahkan nama query method menjadi JPAQL. Untuk melakukan query menggunakan nama method ada beberapa aturan, misalnya ketika ingin menampilkan data pertama kita bisa menggunakan prefix `findFirstBy...`.  
+Untuk lebih detail mengenai prefix, operator dan sebagainya tentang nama query method kita bisa kunjungi disini https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html#jpa.query-methods.query-creation  
+
+``` java
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { 
+
+    // menampilkan semua reciver berdasarkan nama reciver
+    public Optional<Payment> findByReciver(String reciver);
+
+    // menampilkan amound yang lebih besar
+    public List<Payment> findByAmountGreaterThan(Double amount);
+
+    // menampilkan data berdasarkan nama reciver dan diurutkan DESC
+    public List<Payment> findByReciverOrderByDateDesc(String reciver);
+}
+```
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    @Transactional(readOnly = true)
+    public List<Payment> findByreciver(String reciver) {
+        return this.paymentRepository.findByReciverOrderByDateDesc(reciver);
+    }
+}
+```
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    @Test
+    public void testFindReciver(){
+        Payment payment1 = Payment.builder()
+                    .reciver("Abdillah")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .reciver("Asta")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .reciver("Alli")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3));
+
+        List<Payment> reciver = this.paymentService.findByreciver("Abdillah");
+        Assertions.assertTrue(!reciver.isEmpty());
+    }
+}
+```
