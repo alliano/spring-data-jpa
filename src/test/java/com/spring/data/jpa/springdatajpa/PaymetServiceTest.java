@@ -32,12 +32,12 @@ public class PaymetServiceTest {
                     .date(new Date())
                     .build();
         Payment payment2 = Payment.builder()
-                    .reciver("Abdillah")
+                    .reciver("Asta")
                     .amount(10.000d)
                     .date(new Date())
                     .build();
         Payment payment3 = Payment.builder()
-                    .reciver("Abdillah")
+                    .reciver("Alli")
                     .amount(10.000d)
                     .date(new Date())
                     .build();
