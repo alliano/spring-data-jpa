@@ -1,5 +1,6 @@
 package com.spring.data.jpa.springdatajpa;
 
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,8 +11,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.spring.data.jpa.springdatajpa.entities.Address;
 import com.spring.data.jpa.springdatajpa.entities.User;
 import com.spring.data.jpa.springdatajpa.models.PaymentRequest;
+import com.spring.data.jpa.springdatajpa.repositories.AddressRepository;
 import com.spring.data.jpa.springdatajpa.repositories.UserRepository;
 import com.spring.data.jpa.springdatajpa.services.PaymentService;
 import com.spring.data.jpa.springdatajpa.services.UserService;
@@ -25,10 +28,49 @@ public class UserServiceTest {
 
     private @Autowired PaymentService paymentService;
 
+    private @Autowired AddressRepository addressRepository;
+
 
     @BeforeEach
     public void setUp(){
         this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();;
+        this.userRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Rusia")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("3302")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3));
+        User user1 = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .address(address1)
+                    .build();
+        User user2 = User.builder()
+                    .username("Azahra")
+                    .password("secret")
+                    .address(address2)
+                    .build();
+        User user3 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .address(address3)
+                    .build();
+        this.userRepository.saveAll(List.of(user1, user2, user3));
     }
 
     @Test
@@ -89,5 +131,11 @@ public class UserServiceTest {
         User user = this.userService.namedQuery("Abdillah");
         Assertions.assertNotNull(user);
         Assertions.assertEquals("Abdillah", user.getUsername());
+    }
+
+    @Test
+    public void testGetUserByCountry(){
+        List<User> allUserByCountry = this.userService.getAllUserByCountry("Indonesian");
+        Assertions.assertTrue(!allUserByCountry.isEmpty());
     }
 }
