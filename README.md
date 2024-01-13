@@ -639,7 +639,7 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     public List<Payment> findByAmountGreaterThan(Double amount);
 
     // menampilkan data berdasarkan nama reciver dan diurutkan DESC
-    public List<Payment> findByReciverOrderByDateDesc(String reciver);
+    public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
 }
 ```
 ``` java
@@ -650,7 +650,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<Payment> findByreciver(String reciver) {
-        return this.paymentRepository.findByReciverOrderByDateDesc(reciver);
+        return this.paymentRepository.findAllByReciverOrderByDateDesc(reciver);
     }
 }
 ```
@@ -686,3 +686,151 @@ public class PaymetServiceTest {
     }
 }
 ```
+# Query Embeded Field
+Kita telah mengetahui cara melakukan query menggunakan nama method pada layer repository. Namun pertanyaanya bagaimana jikalau kita
+ingin melakukan query berdasarkan relasinya???  
+Ketika kita menggunakan JPA atau query native kita bisa menggunakan tanda titik ( . ) untuk mengakses embeded field
+``` sql
+SELECT *  FROM users AS u INNER JOIN addresses AS a ON (u.address_id = a.id) WHERE a.country = "Indonesian";
+```
+> perhatikan setelah keyword WHERE, disitu terdapat `a.country` yang merupakan embeded field pada entity User
+
+
+Saat kita menggunakan nama method untuk melakukan query nya kita tidak bisa menggunakan tanda titik ( . ) untuk melakukanya karena dalam standar penamaan method tidak boleh menggunakan titik, lantas gimana dong :v???  
+  
+Saat kita menggunakan method query dan kita ingin mengakses embeded fieldnya kita bisa menggunakan simbol underscore ( _ ).  
+  
+Untuk contohnya, mari kita buat tabel address dan kita berikan relasi pada table users.
+``` sql
+CREATE TABLE addresses(
+    id BIGINT AUTO_INCREMENT,
+    country VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(100) NOT NULL,
+    PRIMARY KEY(id)
+)Engine=InnoDB;
+```
+
+``` sql
+ALTER TABLE users ADD column address_id BIGINT UNIQUE,
+    ADD CONSTRAINT fk_address FOREIGN KEY(address_id) REFERENCES addresses(id);
+```
+
+Setelah itu, kita buat entity `Address` dan kita update entity `User`
+``` java
+@Builder @Entity @Table(name = "addresses")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class Address {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
+
+    @OneToOne(mappedBy = "address")
+    private User user;
+}
+```
+``` java
+@Builder @Entity @Table(name = "users")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class User implements Serializable {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @OneToOne(fetch = FetchType.EAGER)
+    private Address address;
+}
+
+```
+
+Berikut ini contoh mengakses embeded field di layer repository menggunakan simbol underscore ( _ ) :
+``` java
+// select * from users as u left join addresses as a on (u.address_id = a.id) where a.country = ?
+public List<User> findAllUserByAddress_CountryEquals(String country);
+
+// Select * from users as u left join addresses as a on (u.address_id = a.id) where a.country = ? and a.city = ?;
+public List<User> findAllUserByAddress_CountryEqualsAndAddress_CityEquals(String country, String city);
+
+// select * from users as u left join addresses as a on (u.address_id = a.id) where a.province = ?
+public Optional<User> findFirstUserByAddress_ProvinceEquals(String province);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserRepositoryTest {
+    
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired AddressRepository addressRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();;
+        this.userRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Rusia")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("3302")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3));
+        User user1 = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .address(address1)
+                    .build();
+        User user2 = User.builder()
+                    .username("Azahra")
+                    .password("secret")
+                    .address(address2)
+                    .build();
+        User user3 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .address(address3)
+                    .build();
+        this.userRepository.saveAll(List.of(user1, user2, user3));
+    }
+
+    @Test
+    public void testEmbeded(){
+        List<User> userByCountryAndAddress = this.userRepository.findAllUserByAddress_CountryEqualsAndAddress_CityEquals("Rusia", "Moscow");
+        Assertions.assertTrue(!userByCountryAndAddress.isEmpty());
+        Assertions.assertNotNull(userByCountryAndAddress);
+    }
+}
+```
+
+
