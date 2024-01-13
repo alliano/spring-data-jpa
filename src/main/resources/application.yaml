@@ -15,7 +15,11 @@ spring:
     show-sql: true
     properties:
       '[format-sql]': true
-
+# enable custom error page
+server:
+  error:
+    whitelabel:
+      enabled: false
 # logging:
 #   level:
 #     org:
