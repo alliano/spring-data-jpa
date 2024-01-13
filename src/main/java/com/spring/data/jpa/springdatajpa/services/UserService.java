@@ -83,6 +83,11 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public User namedQuery(String username) {
-        return this.userRepository.findByUsernameEquals(username).orElse(null);
+        return this.userRepository.findFirstByUsername(username).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getAllUserByCountry(String country) {
+        return this.userRepository.findAllUserByAddress_CountryEquals(country);
     }
 }
