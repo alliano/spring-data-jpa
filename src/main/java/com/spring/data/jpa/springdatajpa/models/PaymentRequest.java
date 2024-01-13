@@ -10,11 +10,11 @@ import lombok.Setter;
 
 @Builder
 @Setter @Getter @AllArgsConstructor @NoArgsConstructor
-public class Payment implements Serializable {
+public class PaymentRequest implements Serializable {
     
     private String id;
 
-    private String username;
+    private String reciver;
 
     private Double amount;
 }

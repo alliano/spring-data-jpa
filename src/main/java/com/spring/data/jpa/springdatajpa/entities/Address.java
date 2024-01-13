@@ -1,10 +1,7 @@
 package com.spring.data.jpa.springdatajpa.entities;
 
-import java.io.Serializable;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,19 +13,25 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Builder @Entity @Table(name = "users")
+@Builder @Entity @Table(name = "addresses")
 @Setter @Getter @AllArgsConstructor @NoArgsConstructor
-public class User implements Serializable {
-
+public class Address {
+    
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "username", nullable = false)
-    private String username;
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
 
-    @Column(name = "password", nullable = false)
-    private String password;
-
-    @OneToOne(fetch = FetchType.EAGER)
-    private Address address;
+    @OneToOne(mappedBy = "address")
+    private User user;
 }

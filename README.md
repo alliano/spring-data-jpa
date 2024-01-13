@@ -245,3 +245,592 @@ public class UserRepositoryTest {
 }
 ```
 
+# Declarative Transaction
+Ketika menggunakan JPA, saat kita ingin melakukan transaction maka kita akan melakukan seperti berikut ini :
+``` java
+EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+Transaction transaction = entityManager.getTransaction();
+transaction.begin();
+// operasi CRUD
+
+transaction.commit();
+```
+Cara diatas adalah cara melakukan transaction secara manual, tentunya agak ribet karena kita harus menghandle secara manual unutk commit dan rollback nya.  
+  
+Saat kita menggunakan Spring Data JPA, jika kita ingin melakukan transaction kita tidak perlu lagi melakukan cara seperti itu. Spring Data JPA menyediakan annotation [`@Transactional`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html) untuk melakukan transaction.  
+  
+Cara kerja Annotation `@Transactional` adalah menggunakan Spring AOP, jadi ketika method yang di annotation dengan `@Transactional` maka ketika method tersebut diakses dari object luar/Object lain maka transaction tersebut akan dijalankan(melakukan commit atau rollback secara otomatis)  
+![cross_aop](/src/main/resources/images/cross_aop.jpg)
+
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional
+    public void create() {
+        User user = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .build();
+
+        User user1 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .build();
+        User user2 = User.builder()
+                    .username("Nabila")
+                    .password("secret")
+                    .build();
+        List<User> userList = new ArrayList<>(List.of(user, user1, user2));
+        userList.forEach(u -> {
+            this.userRepository.save(u);
+        });
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void testIsert(){
+        Assertions.assertThrows(ResponseStatusException.class, () -> {
+            // akan melakukan rollback secara otomatis
+            this.userService.create();
+        });
+    }
+}
+```
+Perlu diketahui bahwa Spring AOP hanya bekerja ketika ada object luar yang mentriger obejct yang memiliki annotation yang dimanage AOP.  
+  
+jika Obejct yang dimanage oleh Spiring AOP diakses dengan method nya sendiri maka Spring AOP tidak akan bekerja. Hal tersebut berlaku juga ketika kita menggunakan annotation `@Transactional` karena annotation tersebut dimanage oleh Spirng AOP  
+![non_cross_aop](./src/main/resources/images/non_cross_aop.jpg)
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional
+    public void create() {
+        User user = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .build();
+
+        User user1 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .build();
+        User user2 = User.builder()
+                    .username("Nabila")
+                    .password("secret")
+                    .build();
+        List<User> userList = new ArrayList<>(List.of(user, user1, user2));
+        userList.forEach(u -> {
+            this.userRepository.save(u);
+        });
+
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "error");
+    }
+
+    // Ketika method ini memanggila method create(); maka transaction tidak akan dijalankan
+    // karena annotation @Transaction hanya bekerja ketika method create() diakses oleh object lain(diakses oleh luar Object)
+    public void call() {
+        create();
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void testInsertFail(){
+        Assertions.assertThrows(ResponseStatusException.class, () -> {
+          /**
+           * ketika method call(); dipanggil
+           * transaction tidak akan dijalankan
+           * */
+            this.userService.call();
+        });
+    }
+}
+```
+  
+Saat menggunakan annotation `@Transactional` kita bisa menambahkan beberapa pengaturan, misalnya :
+| Pengaturan  | Default Value | Deskripsi
+|-------------|---------------|---------------------
+| readOnly    | false         | Jika transaction tidak mengubah data samasekali
+| timeout     | -1            | Membatasi lama transaction
+| propagation | REQUIRED      | Membuat transaction jika belum ada dan tidak membuat transaction jika sudah ada
+
+dan masih banyak lagi, untuk lebih detailny abisa kunjungi disini https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+    public List<User> getUserts() {
+        /**
+        * ini tidak melakukan perubahan data sama sekali, maka kita busa gunakan
+        * aturan readOnly = true
+        *
+        * Propagation.REQUIRED(default value)
+        **/
+        return this.userRepository.findAll();
+    }
+}
+```
+
+# Transaction Propagation
+Sebelumnya kita telah menyinggung tentang pengaturan propagattion yang ada pada annotation `@Transactional`.  
+Transaction propagation digunakan ketika transaction yang sedang berjalan mengakses transaction lain, misalnya ketika method transaction pada `UserService` memanggil method transaction pada `PaymentService`.  
+Ada banyak sekali pengaturan yang bisa kita gunakan pada transaction propagation, diantaranya yaitu
+| Propagation   | Deskripsi 
+|---------------|-----------
+| REQUIRED      | Membuat transaction jika transaction belum dibuat
+| MANDATORY     | Transaction harus diakses oleh transaction lain
+| NEVER         | Tidak melakukan transaction
+
+Dan masih banyak lagi, untuk lebih detail nya bisa kunjungi disini https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html
+
+
+``` java
+@Entity @Table(name = "payments")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor @Builder
+public class Payment implements Serializable {
+    
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+
+    private String reciver;
+
+    private Date date;
+
+    private Double amount;
+}
+```
+
+``` java
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { }
+```
+
+``` java
+@Builder
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class PaymentRequest implements Serializable {
+    
+    private String id;
+
+    private String reciver;
+
+    private Double amount;
+}
+```
+
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    private final ObjectMapper objectMapper;
+    
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void tranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
+        Payment payment = this.objectMapper.readValue(this.objectMapper.writeValueAsString(request), Payment.class);
+        payment.setDate(new Date());
+        this.paymentRepository.save(payment);
+    }
+}
+```
+
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    private final PaymentService paymentService;
+
+    @Transactional
+    public void userTranfer(PaymentRequest request) throws JsonMappingException, JsonProcessingException {
+        this.paymentService.tranfer(request);
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    private @Autowired PaymentService paymentService;
+
+    @Test
+    public void testPropagationSuccess() throws JsonMappingException, JsonProcessingException{
+        PaymentRequest paymentRequest = PaymentRequest.builder()
+                    .amount(10.0000d)
+                    .reciver("Alli")
+                    .build();
+        Assertions.assertDoesNotThrow(() -> {
+            this.userService.userTranfer(paymentRequest);
+        });
+    }
+
+    @Test
+    public void testFailPropagation() throws JsonMappingException, JsonProcessingException {
+        Assertions.assertThrows(IllegalTransactionStateException.class, () -> {
+            PaymentRequest paymentRequest = PaymentRequest.builder()
+                            .reciver("Nero")
+                            .amount(30.000d)
+                            .build();
+            this.paymentService.tranfer(paymentRequest);
+        });
+    }
+}
+```
+
+# TransactionOperation
+Kita telah mengetahui cara melakukan transaction denga cara Declatarive Transaction menggunakan annotation `@Transactional`, namun di case tertentu kita butuh melakukan transaction secara manual, misalnya ketika kode kita berjalan secara multi threding atau Asyncronus.  
+  
+Mungkin teman-teman berfikir *"Kalo gitu pake aja `EntityManager` terus pake method `getTransaction()` untuk dapetion object transaction.... nah abis itu pake transaction nya secara manual"*  
+``` java
+public void create() {
+    EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+    Transaction transaction = entityManager.getTransaction();
+    transaction.begin();
+    // OPERASI CURD
+
+    transaction.commit()
+}
+```
+  
+Hal tersebut dapat kita lakukan, namun daripada menggunakan cara manual seperti diatas lebih baik menggunakan cara prohrammatic denga menggunakan [`TransactionOperation`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/support/TransactionOperations.html) atau [`TransactionTemplate`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/support/TransactionTemplate.html) atau menggunakan cara yang low level dengan menggunakan [`PlatformTransactionManager`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/PlatformTransactionManager.html). Kita bisa mengguankan nya langsung kedua object tersebut karena sudah Diregistrasikan sebagai Bean oleh Spring.  
+
+Untuk melakukan transaction nya kita bisa menggunakan method `execute()` jika method mengembalikan result, namin jika mehtod tida megembalikan result maka bisa menggunakan method `executeWithoutResult()`.  
+Untuk lebih detailnya bisa kunjungi disini https://docs.spring.io/spring-framework/docs/4.2.x/spring-framework-reference/html/transaction.html#transaction-programmatic
+``` java
+@Service @AllArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+
+    private final TransactionOperations transactionOperations;
+
+    public void updateUser() {
+        this.transactionOperations.executeWithoutResult(transaction -> {
+            User user = this.userRepository.findById(12L).orElse(null);
+            user.setUsername("AOWAOKWOAKWAOK");
+            this.userRepository.save(user);
+            throw new RuntimeException("Someting error");
+        });
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserServiceTest {
+    
+    private @Autowired UserService userService;
+
+    @Test
+    public void programmaticTransactionTest(){
+        Assertions.assertThrows(RuntimeException.class, () -> userService.updateUser());
+    }
+}
+```
+  
+# PlatformTransactionManager
+Jika kita ingin melakukan transaction secara low level, tidak disarankan menggunakan `EnitytManager` secara langsung, lebih baik menggunakan [`PlatformTransactionManager`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/PlatformTransactionManager.html). Cara penggunaanya cukup mirip seperti menggunakan `EntityManager`.  
+Kita bisa langsung menggunakan `PlatformTransactionManager` karena spring secara otomatis telah meregistrasikanya menjadi Spring Bean.
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    private final PlatformTransactionManager platformTransactionManager;
+
+    public void manualTransaction() {
+        // ini bisa kita asumsikan sebagai konfigurasi transaction
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
+        definition.setTimeout(5);
+        definition.setReadOnly(false);
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus transaction = this.platformTransactionManager.getTransaction(definition);
+
+        try {
+            Payment payment = Payment.builder()
+                            .reciver("Abdillah")
+                            .amount(40.000d)
+                            .date(new Date())
+                            .build();
+            this.paymentRepository.save(payment);
+            // disini terjadi throw error maka akan melakukan rollback
+            error();
+            this.platformTransactionManager.commit(transaction);
+        } catch (Exception e) {
+            this.platformTransactionManager.rollback(transaction);
+        }
+    }
+    
+    public void error() throws SQLException {
+        throw new SQLException("Something error");
+    }
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    @Test
+    public void testPlatformTransactionMaager(){
+        this.paymentService.manualTransaction();
+    }
+}
+```
+
+# Query Method
+Untuk melakukan Query biasanya kita akan menggunakan `EntityManager` dengan JPAQL
+``` java
+EntityManager entityManager = this.entityManagerFactory.createEntityManager();
+Transaction transaction = entityManager.getTransaction();
+transaction.begin();
+Payment payment = this.objectManpper.readValue(this.objectMapper.writeValueAsString(paymentRequest), Payment.class);
+// melakukan query insert
+entityManager.persist(payment);
+transaction.commit();
+```
+
+Namun, ketika kita menggunakan layer Repository kita tidak perlu melakukanya seperti contoh diatas. Spring Data Jpa memiliki fitur Query Method. Query Method pada Spring Data Jpa memungkinkan kita untuk membuat query berdasarkan nama method nya, misalnya `findById(id)`, `findByNameEquals(name)`, `findByUsernameNotLike(username)` dan sebagainya.  
+  
+Spring Data akan secara otomatis akan melakukan translet/menterjemahkan nama query method menjadi JPAQL. Untuk melakukan query menggunakan nama method ada beberapa aturan, misalnya ketika ingin menampilkan data pertama kita bisa menggunakan prefix `findFirstBy...`.  
+Untuk lebih detail mengenai prefix, operator dan sebagainya tentang nama query method kita bisa kunjungi disini https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html#jpa.query-methods.query-creation  
+
+``` java
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { 
+
+    // menampilkan semua reciver berdasarkan nama reciver
+    public Optional<Payment> findByReciver(String reciver);
+
+    // menampilkan amound yang lebih besar
+    public List<Payment> findByAmountGreaterThan(Double amount);
+
+    // menampilkan data berdasarkan nama reciver dan diurutkan DESC
+    public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
+}
+```
+``` java
+@Service @AllArgsConstructor
+public class PaymentService {
+    
+    private final PaymentRepository paymentRepository;
+
+    @Transactional(readOnly = true)
+    public List<Payment> findByreciver(String reciver) {
+        return this.paymentRepository.findAllByReciverOrderByDateDesc(reciver);
+    }
+}
+```
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    @Test
+    public void testFindReciver(){
+        Payment payment1 = Payment.builder()
+                    .reciver("Abdillah")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .reciver("Asta")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .reciver("Alli")
+                    .amount(10.000d)
+                    .date(new Date())
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3));
+
+        List<Payment> reciver = this.paymentService.findByreciver("Abdillah");
+        Assertions.assertTrue(!reciver.isEmpty());
+    }
+}
+```
+# Query Embeded Field
+Kita telah mengetahui cara melakukan query menggunakan nama method pada layer repository. Namun pertanyaanya bagaimana jikalau kita
+ingin melakukan query berdasarkan relasinya???  
+Ketika kita menggunakan JPA atau query native kita bisa menggunakan tanda titik ( . ) untuk mengakses embeded field
+``` sql
+SELECT *  FROM users AS u INNER JOIN addresses AS a ON (u.address_id = a.id) WHERE a.country = "Indonesian";
+```
+> perhatikan setelah keyword WHERE, disitu terdapat `a.country` yang merupakan embeded field pada entity User
+
+
+Saat kita menggunakan nama method untuk melakukan query nya kita tidak bisa menggunakan tanda titik ( . ) untuk melakukanya karena dalam standar penamaan method tidak boleh menggunakan titik, lantas gimana dong :v???  
+  
+Saat kita menggunakan method query dan kita ingin mengakses embeded fieldnya kita bisa menggunakan simbol underscore ( _ ).  
+  
+Untuk contohnya, mari kita buat tabel address dan kita berikan relasi pada table users.
+``` sql
+CREATE TABLE addresses(
+    id BIGINT AUTO_INCREMENT,
+    country VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(100) NOT NULL,
+    PRIMARY KEY(id)
+)Engine=InnoDB;
+```
+
+``` sql
+ALTER TABLE users ADD column address_id BIGINT UNIQUE,
+    ADD CONSTRAINT fk_address FOREIGN KEY(address_id) REFERENCES addresses(id);
+```
+
+Setelah itu, kita buat entity `Address` dan kita update entity `User`
+``` java
+@Builder @Entity @Table(name = "addresses")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class Address {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
+
+    @OneToOne(mappedBy = "address")
+    private User user;
+}
+```
+``` java
+@Builder @Entity @Table(name = "users")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class User implements Serializable {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @OneToOne(fetch = FetchType.EAGER)
+    private Address address;
+}
+
+```
+
+Berikut ini contoh mengakses embeded field di layer repository menggunakan simbol underscore ( _ ) :
+``` java
+// select * from users as u left join addresses as a on (u.address_id = a.id) where a.country = ?
+public List<User> findAllUserByAddress_CountryEquals(String country);
+
+// Select * from users as u left join addresses as a on (u.address_id = a.id) where a.country = ? and a.city = ?;
+public List<User> findAllUserByAddress_CountryEqualsAndAddress_CityEquals(String country, String city);
+
+// select * from users as u left join addresses as a on (u.address_id = a.id) where a.province = ?
+public Optional<User> findFirstUserByAddress_ProvinceEquals(String province);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserRepositoryTest {
+    
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired AddressRepository addressRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();;
+        this.userRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Rusia")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("3302")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3));
+        User user1 = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .address(address1)
+                    .build();
+        User user2 = User.builder()
+                    .username("Azahra")
+                    .password("secret")
+                    .address(address2)
+                    .build();
+        User user3 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .address(address3)
+                    .build();
+        this.userRepository.saveAll(List.of(user1, user2, user3));
+    }
+
+    @Test
+    public void testEmbeded(){
+        List<User> userByCountryAndAddress = this.userRepository.findAllUserByAddress_CountryEqualsAndAddress_CityEquals("Rusia", "Moscow");
+        Assertions.assertTrue(!userByCountryAndAddress.isEmpty());
+        Assertions.assertNotNull(userByCountryAndAddress);
+    }
+}
+```
+
+

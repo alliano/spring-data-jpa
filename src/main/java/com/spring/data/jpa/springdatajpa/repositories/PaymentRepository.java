@@ -1,23 +1,24 @@
 package com.spring.data.jpa.springdatajpa.repositories;
 
 
-import com.spring.data.jpa.springdatajpa.models.Payment;
+import java.util.List;
+import java.util.Optional;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.EntityTransaction;
-import lombok.AllArgsConstructor;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-@AllArgsConstructor
-public class PaymentRepository {
+import com.spring.data.jpa.springdatajpa.entities.Payment;
 
-    private final EntityManagerFactory entityManagerFactory;
 
-    public void save(Payment payment) {
-       EntityManager entityManager = this.entityManagerFactory.createEntityManager();
-       EntityTransaction transaction = entityManager.getTransaction();
-       transaction.begin();
-       entityManager.persist(payment);
-       transaction.commit();
-    }
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> { 
+
+    // menampilkan semua reciver berdasarkan nama reciver
+    public Optional<Payment> findByReciver(String reciver);
+
+    // menampilkan amound yang lebih besar
+    public List<Payment> findByAmountGreaterThan(Double amount);
+
+    // menampilkan data berdasarkan nama reciver dan diurutkan DESC
+    public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
 }
