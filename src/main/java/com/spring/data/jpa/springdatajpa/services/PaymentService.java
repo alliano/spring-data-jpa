@@ -64,6 +64,6 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<Payment> findByreciver(String reciver) {
-        return this.paymentRepository.findByReciverOrderByDateDesc(reciver);
+        return this.paymentRepository.findAllByReciverOrderByDateDesc(reciver);
     }
 }

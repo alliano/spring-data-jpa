@@ -20,5 +20,5 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     public List<Payment> findByAmountGreaterThan(Double amount);
 
     // menampilkan data berdasarkan nama reciver dan diurutkan DESC
-    public List<Payment> findByReciverOrderByDateDesc(String reciver);
+    public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
 }
