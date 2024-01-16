@@ -833,4 +833,70 @@ public class UserRepositoryTest {
 }
 ```
 
+# Sort
+Sebelumnya kita telah mengetahui cara melakukan pegurutan data `Order by` dengan menggunakan query method
+```java
+public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
 
+public List<Payment> findAllByReciverOrderByDateAsc(String reciver);
+```
+Selain menggunakan nama method seperti contoh diatas kita juga bisa menggunakan [`Sort`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/domain/Sort.html) pada parameter method query
+``` java
+public List<Payment> findAll(Sort sort);
+```
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+
+       
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testSort(){
+        Sort sort = Sort.by(Sort.Order.desc("date"));
+        // select * from payments as p order by p.date desc;
+        List<Payment> paymentList = this.paymentRepository.findAll(sort);
+        Assertions.assertNotNull(!paymentList.isEmpty());
+        Assertions.assertEquals("Alliano", paymentList.get(0).getReciver());
+        Assertions.assertEquals("Azahra", paymentList.get(1).getReciver());
+        Assertions.assertEquals("Abdillah", paymentList.get(2).getReciver());
+    }
+}
+```
+# Paging
