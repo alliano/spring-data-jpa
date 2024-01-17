@@ -6,4 +6,7 @@ import org.springframework.stereotype.Repository;
 import com.spring.data.jpa.springdatajpa.entities.Address;
 
 @Repository
-public interface AddressRepository extends JpaRepository<Address, Long> { }
+public interface AddressRepository extends JpaRepository<Address, Long> {
+
+    public Boolean existsByCountry(String country);
+}
