@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
@@ -29,8 +30,6 @@ public class PaymetServiceTest {
     @BeforeEach
     public void setUp() throws ParseException{
         this.paymentRepository.deleteAll();
-
-       
         Payment payment1 = Payment.builder()
                     .amount(10.000d)
                     .date(simpleDateFormat.parse("10-2-2024"))
@@ -111,5 +110,14 @@ public class PaymetServiceTest {
         paymentList = this.paymentRepository.findAll(page2).getContent();
         Assertions.assertEquals("Abdillah", paymentList.get(0).getReciver());
         Assertions.assertEquals("Alli", paymentList.get(1).getReciver());
+    }
+
+    @Test
+    public void testPagingInformation(){
+        PageRequest pageReq = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("date")));
+        Page<Payment> pageResult = this.paymentRepository.findAll(pageReq);
+        Assertions.assertEquals(2, pageResult.getContent().size());
+        Assertions.assertEquals(3, pageResult.getTotalPages());
+        Assertions.assertEquals(5, pageResult.getTotalElements());
     }
 }
