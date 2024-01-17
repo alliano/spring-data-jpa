@@ -1026,12 +1026,140 @@ public class PaymetServiceTest {
     }
 
     @Test
-    public void testPagingInformation(){
+    public void(){
         PageRequest pageReq = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("date")));
         Page<Payment> pageResult = this.paymentRepository.findAll(pageReq);
         Assertions.assertEquals(2, pageResult.getContent().size());
         Assertions.assertEquals(3, pageResult.getTotalPages());
         Assertions.assertEquals(5, pageResult.getTotalElements());
+    }
+}
+```
+# Count
+Pada spring data Jpa ketika kita ingin mengetahui jumlah data pada tabel kita tidak perlu membuat query secara manual ataupun melakukan `findAll` dan dihiutung result nya.  
+  
+Ketika kita ingin mengetahui jumlah data pada tabel di Spring Data Jpa, kita bisa meggunakan query method dengan prefix `count...`, berikut ini contoh nya
+``` java
+public Long countByAddress_CountryEqualsAndAddress_ProvinceEquals(String country, String province);
+
+public Long countByCountry(String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserRepositoryTest {
+    
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired AddressRepository addressRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Rusia")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("3302")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3));
+        User user1 = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .address(address1)
+                    .build();
+        User user2 = User.builder()
+                    .username("Azahra")
+                    .password("secret")
+                    .address(address2)
+                    .build();
+        User user3 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .address(address3)
+                    .build();
+        this.userRepository.saveAll(List.of(user1, user2, user3));
+    }
+
+    @Test
+    public void testCount(){
+        Long amountUserByAddress = this.userRepository.countByAddress_CountryEqualsAndAddress_ProvinceEquals("Indonesian", "DKI Jakarta");
+        Assertions.assertEquals(2, amountUserByAddress);
+    }
+}
+```
+# Exist
+Terkadang kita ingin mengecek suatu data sudah ada atau belum di database. Ketika kita menggunakan Spring Data Jpa kita tidak perlu melakukanya secara manual, kit bisa secara langsung menggunakan query method dengan prefix `exist...`, berikut ini contohnya 
+``` java
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> {
+
+    public Boolean existsByCountry(String country);
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testExistsByCountry(){
+        Boolean isIndonesianExist = this.addressRepository.existsByCountry("Indonesian");
+        Boolean isRusianExist = this.addressRepository.existsByCountry("Rusian");
+        Boolean isPalestineExist = this.addressRepository.existsByCountry("Palestine");
+        Boolean isYamenExist = this.addressRepository.existsByCountry("Yamen");
+        Boolean isIsraelExist = this.addressRepository.existsByCountry("Israel");
+        Assertions.assertTrue((isIndonesianExist && isRusianExist && isPalestineExist && isYamenExist));
+        
+        Assertions.assertFalse(isIsraelExist);// this will be false because Israel isn't country but terorist
     }
 }
 ```
