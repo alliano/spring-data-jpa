@@ -970,3 +970,68 @@ public class PaymetServiceTest {
     }
 }
 ```
+
+# Page
+Saat kita melakukan paging terkadang kita ingin mengetahui informasi detail dari paging, misalnya :
+* total halaman
+* total keseluruhan data
+* dan sebagainya
+
+Jika kita lakukan secara manual tentunya sangat ribet. Untungnya Spring Data Jpa menyediakan `Page<T>` sebagai return value pada method query.  
+`Page<T>` dapat kita gunakan untuk mengambil detail dari informasi paging.
+
+``` java
+public Page<Payment> findAll(Pageable pageable);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testPagingInformation(){
+        PageRequest pageReq = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("date")));
+        Page<Payment> pageResult = this.paymentRepository.findAll(pageReq);
+        Assertions.assertEquals(2, pageResult.getContent().size());
+        Assertions.assertEquals(3, pageResult.getTotalPages());
+        Assertions.assertEquals(5, pageResult.getTotalElements());
+    }
+}
+```
