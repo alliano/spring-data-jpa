@@ -32,6 +32,4 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     public List<Payment> findAllByReciver(String reciver, Pageable pageable);
 
     public Page<Payment> findAll(Pageable pageable);
-
-
 }
