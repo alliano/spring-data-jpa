@@ -77,4 +77,10 @@ public class UserRepositoryTest {
         Assertions.assertTrue(!userByCountryAndAddress.isEmpty());
         Assertions.assertNotNull(userByCountryAndAddress);
     }
+
+    @Test
+    public void testCount(){
+        Long amountUserByAddress = this.userRepository.countByAddress_CountryEqualsAndAddress_ProvinceEquals("Indonesian", "DKI Jakarta");
+        Assertions.assertEquals(2, amountUserByAddress);
+    }
 }
