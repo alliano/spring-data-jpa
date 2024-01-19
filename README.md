@@ -1163,3 +1163,85 @@ public class AddressRepositoryTest {
     }
 }
 ```
+
+# Delete
+Selain Insert Update Select kita juga bisa membuat delete query method pada Spring Data Jpa dengan prefix `deleteBy...`  
+Namun perlu diketahui operasi delete merupakan operasi manipulasi data di database.  
+  
+ketika reposotory kita meng extend `JpaRepository<T>` dan sebagainya maka semua operasi pada repository kita akan menggunakan implementasi [`SimpleJpaRepository<T, ID>`](https://docs.spring.io/spring-data/data-jpa/docs/current/api/org/springframework/data/jpa/repository/support/SimpleJpaRepository.html) pada implementasi tersebut operasi delete menggunakan transaction dengan pengaturan read only(`@Transaction(readOnly = true)`) artinya transaction untuk menipulasi data tidak diizinkan.
+
+``` java
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> {
+
+    public Boolean existsByCountry(String country);
+
+    // operasi manipulasi data
+    public Integer deleteByCountry(String country);
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void deleteAddressFail(){
+        // ketika kita melakukan delete maka akan terjadi exception karena 
+        // operasi delete tidak diizinkan alis readOnly
+        Assertions.assertThrows(InvalidDataAccessApiUsageException.class, () -> {
+            this.addressRepository.deleteByCountry("Rusian");
+        });
+    }
+}
+```
+Lantans gimana dong agar query method yang kita buat bisa berjalan dengan baik/tidak terjadi exception ????  
+Nah ada dua cara agar method query delete kita berjalan dengan baik yaitu dengan cara menggunakan Pragrammatic transaction
+``` java
+@Test
+public void deleteAddressSuccess(){
+    this.transactionOperations.executeWithoutResult(transactionStatus -> {
+        this.addressRepository.deleteByCountry("Rusian");
+    });
+}
+```
+Atau memberikan annotation `@Transactional(readOnly = false)` pada method query nya
+``` java
+@Transactional(readOnly = false)
+public Integer deleteByCountry(String country);
+```
