@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.transaction.support.TransactionOperations;
 
 import com.spring.data.jpa.springdatajpa.entities.Address;
 import com.spring.data.jpa.springdatajpa.repositories.AddressRepository;
@@ -18,6 +20,8 @@ public class AddressRepositoryTest {
     private @Autowired AddressRepository addressRepository;
 
     private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
 
     @BeforeEach
     public void setUp(){
@@ -58,7 +62,21 @@ public class AddressRepositoryTest {
         Boolean isYamenExist = this.addressRepository.existsByCountry("Yamen");
         Boolean isIsraelExist = this.addressRepository.existsByCountry("Israel");
         Assertions.assertTrue((isIndonesianExist && isRusianExist && isPalestineExist && isYamenExist));
-        
+
         Assertions.assertFalse(isIsraelExist);// this will be false because Israel isn't country
+    }
+
+    @Test
+    public void deleteAddressFail(){
+        Assertions.assertThrows(InvalidDataAccessApiUsageException.class, () -> {
+            this.addressRepository.deleteByCountry("Rusian");
+        });
+    }
+
+    @Test
+    public void deleteAddressSuccess(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            this.addressRepository.deleteByCountry("Rusian");
+        });
     }
 }
