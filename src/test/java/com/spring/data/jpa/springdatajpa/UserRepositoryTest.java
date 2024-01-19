@@ -23,8 +23,7 @@ public class UserRepositoryTest {
     @BeforeEach
     public void setUp(){
         this.userRepository.deleteAll();
-        this.addressRepository.deleteAll();;
-        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
         Address address1 = Address.builder()
                     .country("Indonesian")
                     .city("Jakarta")
