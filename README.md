@@ -1245,3 +1245,95 @@ Atau memberikan annotation `@Transactional(readOnly = false)` pada method query 
 @Transactional(readOnly = false)
 public Integer deleteByCountry(String country);
 ```
+
+# Named Query
+Spring Data Jpa juga mendukung penggunaan named query, untuk lebih detail tentang named query bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#named-query  
+  
+Untuk menggunakan named query pada Spring Data Jpa caranya cukup mirip seperti menggunakan JPA secara manual
+``` java
+@NamedQueries(value = {
+    @NamedQuery(name = "Address.getAddressUsingProvinceName", query = "SELECT a FROM Address AS a WHERE a.province = :province")
+})
+@Builder @Entity @Table(name = "addresses")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class Address {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
+
+    @OneToOne(mappedBy = "address")
+    private User user;
+}
+```
+dan pada repository nya kita buatkan nama method sesuai dengan nama named query pada entity
+``` java
+public List<Address> getAddressUsingProvinceName(@Param(value = "province") String province);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testNamedQuery(){
+        List<Address> addresses = this.addressRepository.getAddressUsingProvinceName("Jakarta");
+        Assertions.assertNotNull(addresses.size());
+    }
+}
+```
+
+**NOTE** :
+> Named Query tidak mendukung penggunakan Object `Sort` untuk melakukan pengurutan data. Jika kita ingin mengurutkan data maka kita harus melakukanya secara manual
+
+
+# @Query
+
