@@ -79,4 +79,10 @@ public class AddressRepositoryTest {
             this.addressRepository.deleteByCountry("Rusian");
         });
     }
+
+    @Test
+    public void testNamedQuery(){
+        List<Address> addresses = this.addressRepository.getAddressUsingProvinceName("Jakarta");
+        Assertions.assertNotNull(addresses.size());
+    }
 }

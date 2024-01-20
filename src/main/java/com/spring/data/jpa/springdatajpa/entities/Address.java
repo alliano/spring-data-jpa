@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedQueries;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -13,6 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+@NamedQueries(value = {
+    @NamedQuery(name = "Address.getAddressUsingProvinceName", query = "SELECT a FROM Address AS a WHERE a.province = :province ORDER BY a.id ASC")
+})
 @Builder @Entity @Table(name = "addresses")
 @Setter @Getter @AllArgsConstructor @NoArgsConstructor
 public class Address {
