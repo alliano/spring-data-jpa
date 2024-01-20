@@ -19,7 +19,7 @@ spring:
 server:
   error:
     whitelabel:
-      enabled: false
+      enabled: true
 # logging:
 #   level:
 #     org:
