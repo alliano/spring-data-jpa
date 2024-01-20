@@ -4,12 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Error</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik+Broken+Fax&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Philosopher&family=Rubik+Broken+Fax&display=swap" rel="stylesheet">
+    <style>
+        .error-content {
+            display: flex;
+            padding: 2px;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-message h1 {
+            width: max-content;
+            height: max-content;
+            font-size: 5rem;
+            font-family: 'Rubik Broken Fax', system-ui;
+            color: rgb(80, 80, 79);
+        }
+        .error-message {
+            padding: 2px;
+            border: 2px dotted rgb(153, 153, 153);
+            width: max-content;
+        }
+        .error-message p {
+            font-size: 2rem;
+            font-family: 'Philosopher', sans-serif;
+        }
+    </style>
 </head>
 <body>
-    <h1>Error</h1>
-    <p>
-        <h1>Status : $statusCode</h1>
-    </p>
-    <p>Message : $errorMessage</p>
+    <div class="error-content">
+        <div class="error-message">
+            <h1>Error</h1>
+            <p id="status">Status : $statusCode</p>
+            <p id="message">Message : $errorMessage</p>
+        </div>
+    </div>
 </body>
 </html>
