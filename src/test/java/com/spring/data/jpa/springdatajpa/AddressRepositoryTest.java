@@ -8,6 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.transaction.support.TransactionOperations;
 
 import com.spring.data.jpa.springdatajpa.entities.Address;
@@ -84,5 +88,45 @@ public class AddressRepositoryTest {
     public void testNamedQuery(){
         List<Address> addresses = this.addressRepository.getAddressUsingProvinceName("Jakarta");
         Assertions.assertNotNull(addresses.size());
+    }
+    
+    @Test
+    public void testQueryAnnotationNative(){
+        List<Address> addresses = this.addressRepository.getAllAddress();
+        Assertions.assertNotNull(addresses.size());
+        Assertions.assertSame(4, addresses.size());
+    }
+
+    @Test
+    public void testQueryAnnotationWithPageResult(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("id")));
+        Page<Address> addressPage = this.addressRepository.getAllAddressUsingProvince("DKI Jakarta", pageable);
+        Assertions.assertFalse(addressPage.getContent().isEmpty());
+        Assertions.assertEquals(1, addressPage.getTotalElements());
+        Assertions.assertEquals(1, addressPage.getTotalPages());
+    }
+
+    @Test
+    public void testQueryAnnotation(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Order.desc("id")));
+        List<Address> addressList = this.addressRepository.getAddressUsingCountry("Indonesian", pageable);
+        Assertions.assertNotNull(addressList.size());
+        Assertions.assertSame(1, addressList.size());
+    }
+
+    @Test
+    public void testModifyigAnnotation(){
+        List<Address> addresses = this.addressRepository.findAll();
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            
+            Integer impactRows = this.addressRepository.updateCountryName(addresses.get(0).getId(), "Malaysia");
+            Assertions.assertEquals(1, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(10L);
+            Assertions.assertEquals(0, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(addresses.get(0).getId());
+            Assertions.assertEquals(1, impactRows);
+        });
     }
 }
