@@ -1548,5 +1548,70 @@ public class AddressRepositoryTest {
 **NOTE :**
 > Disini kita perlu membungkus eksekusi method query nya dengan transaction, karena by default transaction nya read only
 
-# 
+# Stream
+Ketika kita melakukan `findAll...` dan sebagainya maka result nya akan disimpan pada tipe data `List<T>` dan data-data tersebut akan disimpan didalam memory.  
+Pada saat data yang di select berjumlah jutaan maka data tersebut akan disimpan di memory, hal tersebut kurang baik karena memakan resource yang sangat besar bahkan bisa mengakibatkan exception `OutOfMemory`
+  
+Terus bagaimana dong solusinya ???  
+Kita bisa menggunakan `Stream<T>` untuk mengatasi hal tersebut. Ketika kita menggunakan `Stream<T>` sebagai result query nya maka Spring Data Jpa akan menggunakan Database cursor untuk mengambil datanya sedikit demi sedikit.  
+untuk melakukan query dengan result `Stream<T>` kita bisa melakukanya dengan method query dengan prefix `streamAll...`
+
+``` java
+public Stream<Address> streamByCountry(String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testStream(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Supplier<Stream<Address>> addressSuplier = () -> this.addressRepository.streamByCountry("Indonesian");
+            Assertions.assertEquals(1, addressSuplier.get().count());
+            List<String> province = addressSuplier.get().map(c -> c.getProvince()).collect(Collectors.toList());
+            Assertions.assertEquals("DKI Jakarta", province.getFirst());
+        });
+    }
+}
+```
+**NOTE :**
+> Ketika kita menggunakan `Stream<T>` sebagai result query nya maka proses query nya wajib dijalankan didalam transaction, disini kita bebas mau menggunakan Programmatic Transaction atau `@Transactional` annotation
 
