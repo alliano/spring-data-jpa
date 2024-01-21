@@ -833,4 +833,785 @@ public class UserRepositoryTest {
 }
 ```
 
+# Sort
+Sebelumnya kita telah mengetahui cara melakukan pegurutan data `Order by` dengan menggunakan query method
+```java
+public List<Payment> findAllByReciverOrderByDateDesc(String reciver);
+
+public List<Payment> findAllByReciverOrderByDateAsc(String reciver);
+```
+Selain menggunakan nama method seperti contoh diatas kita juga bisa menggunakan [`Sort`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/domain/Sort.html) pada parameter method query
+``` java
+public List<Payment> findAll(Sort sort);
+```
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+
+       
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testSort(){
+        Sort sort = Sort.by(Sort.Order.desc("date"));
+        // select * from payments as p order by p.date desc;
+        List<Payment> paymentList = this.paymentRepository.findAll(sort);
+        Assertions.assertNotNull(!paymentList.isEmpty());
+        Assertions.assertEquals("Alliano", paymentList.get(0).getReciver());
+        Assertions.assertEquals("Azahra", paymentList.get(1).getReciver());
+        Assertions.assertEquals("Abdillah", paymentList.get(2).getReciver());
+    }
+}
+```
+# Paging
+Untuk melakukan paging di Spring Data Jpa kita bisa menggunakan `Pageable` di akhir parameter method query.  
+Saat menggunakan `Pageable` dan ingin mengurutkan data kita tidak perlu lagi membutuhkan parameter `Sort` pada mthod query karena didalam `Pageable` terdapat `Sort` yang dapat kita gunakan untuk melakukan pengurutan data.  
+  
+`Pageable` adalah sebuah interface dan untuk menggunakanya kita membutuhkan implementasinya. Untuk menggunakan `Pageable` kita bisa menggunakan `PageRequest` karena `PageRequest` adalah salah satu dari implementasi `Pageable`.  
+
+``` java
+public List<Payment> findAllByReciver(String reciver, Pageable pageable);
+
+public Page<Payment> findAll(Pageable pageable);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+
+       
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testPaging(){
+        // halaman 1
+        PageRequest page1 = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("date")));
+        List<Payment> paymentList = this.paymentRepository.findAll(page1).getContent();
+        Assertions.assertEquals("Alliano", paymentList.get(0).getReciver());
+        Assertions.assertEquals("Azahra", paymentList.get(1).getReciver());
+
+        // halaman 2
+        PageRequest page2 = PageRequest.of(1, 2, Sort.by(Sort.Order.desc("date")));
+        paymentList = this.paymentRepository.findAll(page2).getContent();
+        Assertions.assertEquals("Abdillah", paymentList.get(0).getReciver());
+        Assertions.assertEquals("Alli", paymentList.get(1).getReciver());
+    }
+}
+```
+
+# Page
+Saat kita melakukan paging terkadang kita ingin mengetahui informasi detail dari paging, misalnya :
+* total halaman
+* total keseluruhan data
+* dan sebagainya
+
+Jika kita lakukan secara manual tentunya sangat ribet. Untungnya Spring Data Jpa menyediakan `Page<T>` sebagai return value pada method query.  
+`Page<T>` dapat kita gunakan untuk mengambil detail dari informasi paging.
+
+``` java
+public Page<Payment> findAll(Pageable pageable);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void(){
+        PageRequest pageReq = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("date")));
+        Page<Payment> pageResult = this.paymentRepository.findAll(pageReq);
+        Assertions.assertEquals(2, pageResult.getContent().size());
+        Assertions.assertEquals(3, pageResult.getTotalPages());
+        Assertions.assertEquals(5, pageResult.getTotalElements());
+    }
+}
+```
+# Count
+Pada spring data Jpa ketika kita ingin mengetahui jumlah data pada tabel kita tidak perlu membuat query secara manual ataupun melakukan `findAll` dan dihiutung result nya.  
+  
+Ketika kita ingin mengetahui jumlah data pada tabel di Spring Data Jpa, kita bisa meggunakan query method dengan prefix `count...`, berikut ini contoh nya
+``` java
+public Long countByAddress_CountryEqualsAndAddress_ProvinceEquals(String country, String province);
+
+public Long countByCountry(String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class UserRepositoryTest {
+    
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired AddressRepository addressRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("94502")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Rusia")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("3302")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3));
+        User user1 = User.builder()
+                    .username("Abdillah")
+                    .password("secret")
+                    .address(address1)
+                    .build();
+        User user2 = User.builder()
+                    .username("Azahra")
+                    .password("secret")
+                    .address(address2)
+                    .build();
+        User user3 = User.builder()
+                    .username("Alli")
+                    .password("secret")
+                    .address(address3)
+                    .build();
+        this.userRepository.saveAll(List.of(user1, user2, user3));
+    }
+
+    @Test
+    public void testCount(){
+        Long amountUserByAddress = this.userRepository.countByAddress_CountryEqualsAndAddress_ProvinceEquals("Indonesian", "DKI Jakarta");
+        Assertions.assertEquals(2, amountUserByAddress);
+    }
+}
+```
+# Exist
+Terkadang kita ingin mengecek suatu data sudah ada atau belum di database. Ketika kita menggunakan Spring Data Jpa kita tidak perlu melakukanya secara manual, kit bisa secara langsung menggunakan query method dengan prefix `exist...`, berikut ini contohnya 
+``` java
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> {
+
+    public Boolean existsByCountry(String country);
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testExistsByCountry(){
+        Boolean isIndonesianExist = this.addressRepository.existsByCountry("Indonesian");
+        Boolean isRusianExist = this.addressRepository.existsByCountry("Rusian");
+        Boolean isPalestineExist = this.addressRepository.existsByCountry("Palestine");
+        Boolean isYamenExist = this.addressRepository.existsByCountry("Yamen");
+        Boolean isIsraelExist = this.addressRepository.existsByCountry("Israel");
+        Assertions.assertTrue((isIndonesianExist && isRusianExist && isPalestineExist && isYamenExist));
+        
+        Assertions.assertFalse(isIsraelExist);// this will be false because Israel isn't country but terorist
+    }
+}
+```
+
+# Delete
+Selain Insert Update Select kita juga bisa membuat delete query method pada Spring Data Jpa dengan prefix `deleteBy...`  
+Namun perlu diketahui operasi delete merupakan operasi manipulasi data di database.  
+  
+ketika reposotory kita meng extend `JpaRepository<T>` dan sebagainya maka semua operasi pada repository kita akan menggunakan implementasi [`SimpleJpaRepository<T, ID>`](https://docs.spring.io/spring-data/data-jpa/docs/current/api/org/springframework/data/jpa/repository/support/SimpleJpaRepository.html) pada implementasi tersebut operasi delete menggunakan transaction dengan pengaturan read only(`@Transaction(readOnly = true)`) artinya transaction untuk menipulasi data tidak diizinkan.
+
+``` java
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> {
+
+    public Boolean existsByCountry(String country);
+
+    // operasi manipulasi data
+    public Integer deleteByCountry(String country);
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void deleteAddressFail(){
+        // ketika kita melakukan delete maka akan terjadi exception karena 
+        // operasi delete tidak diizinkan alis readOnly
+        Assertions.assertThrows(InvalidDataAccessApiUsageException.class, () -> {
+            this.addressRepository.deleteByCountry("Rusian");
+        });
+    }
+}
+```
+Lantans gimana dong agar query method yang kita buat bisa berjalan dengan baik/tidak terjadi exception ????  
+Nah ada dua cara agar method query delete kita berjalan dengan baik yaitu dengan cara menggunakan Pragrammatic transaction
+``` java
+@Test
+public void deleteAddressSuccess(){
+    this.transactionOperations.executeWithoutResult(transactionStatus -> {
+        this.addressRepository.deleteByCountry("Rusian");
+    });
+}
+```
+Atau memberikan annotation `@Transactional(readOnly = false)` pada method query nya
+``` java
+@Transactional(readOnly = false)
+public Integer deleteByCountry(String country);
+```
+
+# Named Query
+Spring Data Jpa juga mendukung penggunaan named query, untuk lebih detail tentang named query bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#named-query  
+  
+Untuk menggunakan named query pada Spring Data Jpa caranya cukup mirip seperti menggunakan JPA secara manual
+``` java
+@NamedQueries(value = {
+    @NamedQuery(name = "Address.getAddressUsingProvinceName", query = "SELECT a FROM Address AS a WHERE a.province = :province")
+})
+@Builder @Entity @Table(name = "addresses")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class Address {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
+
+    @OneToOne(mappedBy = "address")
+    private User user;
+}
+```
+dan pada repository nya kita buatkan nama method sesuai dengan nama named query pada entity
+``` java
+public List<Address> getAddressUsingProvinceName(@Param(value = "province") String province);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testNamedQuery(){
+        List<Address> addresses = this.addressRepository.getAddressUsingProvinceName("Jakarta");
+        Assertions.assertNotNull(addresses.size());
+    }
+}
+```
+
+**NOTE** :
+> Named Query tidak mendukung penggunakan Object `Sort` untuk melakukan pengurutan data. Jika kita ingin mengurutkan data maka kita harus melakukanya secara manual
+
+
+# @Query
+Name method query dan named query merupakan query yang digunakan untuk operasi query yang tidak begitu kompleks, jika kita membutuhkan query yang lumayan kompleks atau bahkan sangat kompleks kita bisa menggunakan annotation [`@Query`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/Query.html)  
+dengan menggunakan annotation `@Query` kita bisa menggunakan sintax JPAQL bahkan SQL native
+``` java
+// menggunakan JPAQl
+@Query(name = "getAddressCountry",nativeQuery = false, value = "SELECT a FROM Address AS a WHERE a.country LIKE :country")
+public List<Address> getAddressUsingCountry(@Param(value = "country")String country, Pageable pageable);
+
+// menggunakan native query
+@Query(name = "getAllAddress", nativeQuery = true, value = "SELECT * FROM addresses")
+public List<Address> getAllAddress();
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testQueryAnnotationNative(){
+        List<Address> addresses = this.addressRepository.getAllAddress();
+        Assertions.assertNotNull(addresses.size());
+        Assertions.assertSame(4, addresses.size());
+    }
+
+    @Test
+    public void testQueryAnnotation(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Order.desc("id")));
+        List<Address> addressList = this.addressRepository.getAddressUsingCountry("Indonesian", pageable);
+        Assertions.assertNotNull(addressList.size());
+        Assertions.assertSame(1, addressList.size());
+    }
+}
+```
+**NOTE:**
+> ketika kita menggunakan `@Query` annotation kita bebas dalam penamaan method nya
+
+
+Ketika kita menggunakan `@Query` annotation dan kita ingin data yang dikembalikan itu berupa `Page<T>` maka kita perlu memberitahu jpa bagaimana cara melakukan count data nya dengan cara menambahkan attribute `countQuery` pada annotation `@Query` dan kita devinisikan query untuk melakukan count
+
+``` java
+@Query(
+    name = "getAllAddressUsingProvice", 
+    nativeQuery = false, value = "SELECT a FROM Address AS a WHERE a.province = :province", 
+    countQuery = "SELECT COUNT(a) FROM Address AS a WHERE a.province = :province")
+public Page<Address> getAllAddressUsingProvince(@Param(value = "province")String province, Pageable pageable);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testQueryAnnotationWithPageResult(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("id")));
+        Page<Address> addressPage = this.addressRepository.getAllAddressUsingProvince("DKI Jakarta", pageable);
+        Assertions.assertFalse(addressPage.getContent().isEmpty());
+        Assertions.assertEquals(1, addressPage.getTotalElements());
+        Assertions.assertEquals(1, addressPage.getTotalPages());
+    }
+}
+```
+
+# @Modifying
+Ketika kita menggunakan `@Query` annotation untuk melakukan Update atau Delete menggunakan native query atau JPAQL maka error akan terjadi, karena Spring Data Jpa secara default hanya mengizinkan operasi Select.  
+  
+Jika kita ingin menggunakan `@Query` annoation untuk melakukan update atau delete maka kita harus memberitahu Spring Data Jpa bahwa query tersebut melakukan manipulasi data didalam database. Kita dapat memberitahunya dengan menggunakan annotation [`@Modifying`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/Modifying.html)
+
+``` java
+@Modifying
+@Query(name = "deleteAddressUsingId", nativeQuery = false, value = "DELETE FROM Address AS a WHERE a.id = :id")
+public Integer deleteAddressUsingId(@Param(value = "id") Long id);
+
+@Modifying
+@Query(name = "updateCountryName", nativeQuery = false, value = "UPDATE Address AS a SET a.country = :country WHERE a.id = :id")
+public Integer updateCountryName(@Param(value = "id") Long id, @Param(value = "country") String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testModifyigAnnotation(){
+        List<Address> addresses = this.addressRepository.findAll();
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            
+            Integer impactRows = this.addressRepository.updateCountryName(addresses.get(0).getId(), "Malaysia");
+            Assertions.assertEquals(1, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(10L);
+            Assertions.assertEquals(0, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(addresses.get(0).getId());
+            Assertions.assertEquals(1, impactRows);
+        });
+    }
+}
+```
+
+**NOTE :**
+> Disini kita perlu membungkus eksekusi method query nya dengan transaction, karena by default transaction nya read only
+
+# Stream
+Ketika kita melakukan `findAll...` dan sebagainya maka result nya akan disimpan pada tipe data `List<T>` dan data-data tersebut akan disimpan didalam memory.  
+Pada saat data yang di select berjumlah jutaan maka data tersebut akan disimpan di memory, hal tersebut kurang baik karena memakan resource yang sangat besar bahkan bisa mengakibatkan exception `OutOfMemory`
+  
+Terus bagaimana dong solusinya ???  
+Kita bisa menggunakan `Stream<T>` untuk mengatasi hal tersebut. Ketika kita menggunakan `Stream<T>` sebagai result query nya maka Spring Data Jpa akan menggunakan Database cursor untuk mengambil datanya sedikit demi sedikit.  
+untuk melakukan query dengan result `Stream<T>` kita bisa melakukanya dengan method query dengan prefix `streamAll...`
+
+``` java
+public Stream<Address> streamByCountry(String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testStream(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Supplier<Stream<Address>> addressSuplier = () -> this.addressRepository.streamByCountry("Indonesian");
+            Assertions.assertEquals(1, addressSuplier.get().count());
+            List<String> province = addressSuplier.get().map(c -> c.getProvince()).collect(Collectors.toList());
+            Assertions.assertEquals("DKI Jakarta", province.getFirst());
+        });
+    }
+}
+```
+**NOTE :**
+> Ketika kita menggunakan `Stream<T>` sebagai result query nya maka proses query nya wajib dijalankan didalam transaction, disini kita bebas mau menggunakan Programmatic Transaction atau `@Transactional` annotation
 

@@ -23,8 +23,7 @@ public class UserRepositoryTest {
     @BeforeEach
     public void setUp(){
         this.userRepository.deleteAll();
-        this.addressRepository.deleteAll();;
-        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
         Address address1 = Address.builder()
                     .country("Indonesian")
                     .city("Jakarta")
@@ -76,5 +75,11 @@ public class UserRepositoryTest {
         List<User> userByCountryAndAddress = this.userRepository.findAllUserByAddress_CountryEqualsAndAddress_CityEquals("Rusia", "Moscow");
         Assertions.assertTrue(!userByCountryAndAddress.isEmpty());
         Assertions.assertNotNull(userByCountryAndAddress);
+    }
+
+    @Test
+    public void testCount(){
+        Long amountUserByAddress = this.userRepository.countByAddress_CountryEqualsAndAddress_ProvinceEquals("Indonesian", "DKI Jakarta");
+        Assertions.assertEquals(2, amountUserByAddress);
     }
 }

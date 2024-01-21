@@ -32,4 +32,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     public Optional<User> findFirstUserByAddress_ProvinceEquals(String province);
 
+    public Long countByAddress_CountryEqualsAndAddress_ProvinceEquals(String country, String province);
+
 }

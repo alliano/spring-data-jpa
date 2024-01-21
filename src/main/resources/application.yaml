@@ -14,12 +14,12 @@ spring:
   jpa:
     show-sql: true
     properties:
-      '[format-sql]': true
+      '[format-sql]': false
 # enable custom error page
 server:
   error:
     whitelabel:
-      enabled: false
+      enabled: true
 # logging:
 #   level:
 #     org:
