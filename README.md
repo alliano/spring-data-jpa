@@ -1336,4 +1336,217 @@ public class AddressRepositoryTest {
 
 
 # @Query
+Name method query dan named query merupakan query yang digunakan untuk operasi query yang tidak begitu kompleks, jika kita membutuhkan query yang lumayan kompleks atau bahkan sangat kompleks kita bisa menggunakan annotation [`@Query`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/Query.html)  
+dengan menggunakan annotation `@Query` kita bisa menggunakan sintax JPAQL bahkan SQL native
+``` java
+// menggunakan JPAQl
+@Query(name = "getAddressCountry",nativeQuery = false, value = "SELECT a FROM Address AS a WHERE a.country LIKE :country")
+public List<Address> getAddressUsingCountry(@Param(value = "country")String country, Pageable pageable);
+
+// menggunakan native query
+@Query(name = "getAllAddress", nativeQuery = true, value = "SELECT * FROM addresses")
+public List<Address> getAllAddress();
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testQueryAnnotationNative(){
+        List<Address> addresses = this.addressRepository.getAllAddress();
+        Assertions.assertNotNull(addresses.size());
+        Assertions.assertSame(4, addresses.size());
+    }
+
+    @Test
+    public void testQueryAnnotation(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Order.desc("id")));
+        List<Address> addressList = this.addressRepository.getAddressUsingCountry("Indonesian", pageable);
+        Assertions.assertNotNull(addressList.size());
+        Assertions.assertSame(1, addressList.size());
+    }
+}
+```
+**NOTE:**
+> ketika kita menggunakan `@Query` annotation kita bebas dalam penamaan method nya
+
+
+Ketika kita menggunakan `@Query` annotation dan kita ingin data yang dikembalikan itu berupa `Page<T>` maka kita perlu memberitahu jpa bagaimana cara melakukan count data nya dengan cara menambahkan attribute `countQuery` pada annotation `@Query` dan kita devinisikan query untuk melakukan count
+
+``` java
+@Query(
+    name = "getAllAddressUsingProvice", 
+    nativeQuery = false, value = "SELECT a FROM Address AS a WHERE a.province = :province", 
+    countQuery = "SELECT COUNT(a) FROM Address AS a WHERE a.province = :province")
+public Page<Address> getAllAddressUsingProvince(@Param(value = "province")String province, Pageable pageable);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testQueryAnnotationWithPageResult(){
+        PageRequest pageable = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("id")));
+        Page<Address> addressPage = this.addressRepository.getAllAddressUsingProvince("DKI Jakarta", pageable);
+        Assertions.assertFalse(addressPage.getContent().isEmpty());
+        Assertions.assertEquals(1, addressPage.getTotalElements());
+        Assertions.assertEquals(1, addressPage.getTotalPages());
+    }
+}
+```
+
+# @Modifying
+Ketika kita menggunakan `@Query` annotation untuk melakukan Update atau Delete menggunakan native query atau JPAQL maka error akan terjadi, karena Spring Data Jpa secara default hanya mengizinkan operasi Select.  
+  
+Jika kita ingin menggunakan `@Query` annoation untuk melakukan update atau delete maka kita harus memberitahu Spring Data Jpa bahwa query tersebut melakukan manipulasi data didalam database. Kita dapat memberitahunya dengan menggunakan annotation [`@Modifying`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/Modifying.html)
+
+``` java
+@Modifying
+@Query(name = "deleteAddressUsingId", nativeQuery = false, value = "DELETE FROM Address AS a WHERE a.id = :id")
+public Integer deleteAddressUsingId(@Param(value = "id") Long id);
+
+@Modifying
+@Query(name = "updateCountryName", nativeQuery = false, value = "UPDATE Address AS a SET a.country = :country WHERE a.id = :id")
+public Integer updateCountryName(@Param(value = "id") Long id, @Param(value = "country") String country);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testModifyigAnnotation(){
+        List<Address> addresses = this.addressRepository.findAll();
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            
+            Integer impactRows = this.addressRepository.updateCountryName(addresses.get(0).getId(), "Malaysia");
+            Assertions.assertEquals(1, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(10L);
+            Assertions.assertEquals(0, impactRows);
+
+            impactRows = this.addressRepository.deleteAddressUsingId(addresses.get(0).getId());
+            Assertions.assertEquals(1, impactRows);
+        });
+    }
+}
+```
+
+**NOTE :**
+> Disini kita perlu membungkus eksekusi method query nya dengan transaction, karena by default transaction nya read only
+
+# 
 
