@@ -1615,3 +1615,4 @@ public class AddressRepositoryTest {
 **NOTE :**
 > Ketika kita menggunakan `Stream<T>` sebagai result query nya maka proses query nya wajib dijalankan didalam transaction, disini kita bebas mau menggunakan Programmatic Transaction atau `@Transactional` annotation
 
+# Slice
