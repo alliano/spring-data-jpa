@@ -1,6 +1,7 @@
 package com.spring.data.jpa.springdatajpa.repositories;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,4 +45,6 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     @Modifying
     @Query(name = "updateCountryName", nativeQuery = false, value = "UPDATE Address AS a SET a.country = :country WHERE a.id = :id")
     public Integer updateCountryName(@Param(value = "id") Long id, @Param(value = "country") String country);
+
+    public Stream<Address> streamByCountry(String country);
 }

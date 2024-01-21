@@ -1,6 +1,9 @@
 package com.spring.data.jpa.springdatajpa;
 
 import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -127,6 +130,16 @@ public class AddressRepositoryTest {
 
             impactRows = this.addressRepository.deleteAddressUsingId(addresses.get(0).getId());
             Assertions.assertEquals(1, impactRows);
+        });
+    }
+
+    @Test
+    public void testStream(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Supplier<Stream<Address>> addressSuplier = () -> this.addressRepository.streamByCountry("Indonesian");
+            Assertions.assertEquals(1, addressSuplier.get().count());
+            List<String> province = addressSuplier.get().map(c -> c.getProvince()).collect(Collectors.toList());
+            Assertions.assertEquals("DKI Jakarta", province.getFirst());
         });
     }
 }
