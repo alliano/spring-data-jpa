@@ -1620,7 +1620,7 @@ Java Persistence API memiliki 2 mode Locking :
 * Perimistic Locking
 * Optimistic Locking  
 
-Untuk keduanya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#locking
+Untuk detail dari keduanya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#locking
   
 ### Optimistic Locking
 Untuk melakukan **Optimistic Locking** cukuplah mudah, kita hanya perlu manambahkan kolom version dan diatotasi dengan `@Version`. Untuk lebih detail nya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#optimistic-locking
