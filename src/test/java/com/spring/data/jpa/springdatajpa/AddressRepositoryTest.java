@@ -142,4 +142,34 @@ public class AddressRepositoryTest {
             Assertions.assertEquals("DKI Jakarta", province.getFirst());
         });
     }
+
+    @Test
+    public void testPesimisticLocing1(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            try {
+                Address address = this.addressRepository.findById(getId()).get();
+                address.setProvince("Maluku");
+                Thread.sleep(15_000L);
+                this.addressRepository.save(address);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * method ini akan dipanggil setelah method testPesimisticLocking1 selesai
+     */
+    @Test
+    public void testPesimisticLocing2(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Address address = this.addressRepository.findById(getId()).get();
+            address.setProvince("Aceh");
+            this.addressRepository.save(address);
+        });
+    }
+
+    private Long getId() {
+        return this.addressRepository.findAll().get(0).getId();
+    }
 }

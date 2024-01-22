@@ -1,11 +1,13 @@
 package com.spring.data.jpa.springdatajpa.repositories;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Repository;
 // import org.springframework.transaction.annotation.Transactional;
 
 import com.spring.data.jpa.springdatajpa.entities.Address;
+
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface AddressRepository extends JpaRepository<Address, Long> {
@@ -47,4 +51,7 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     public Integer updateCountryName(@Param(value = "id") Long id, @Param(value = "country") String country);
 
     public Stream<Address> streamByCountry(String country);
+
+    @Lock(value = LockModeType.PESSIMISTIC_WRITE)
+    public Optional<Address> findById(Long id);
 }
