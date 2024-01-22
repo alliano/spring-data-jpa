@@ -1615,4 +1615,98 @@ public class AddressRepositoryTest {
 **NOTE :**
 > Ketika kita menggunakan `Stream<T>` sebagai result query nya maka proses query nya wajib dijalankan didalam transaction, disini kita bebas mau menggunakan Programmatic Transaction atau `@Transactional` annotation
 
-# Slice
+# Locking
+Java Persistence API memiliki 2 mode Locking :
+* Perimistic Locking
+* Optimistic Locking  
+
+Untuk keduanya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#locking
+  
+### Optimistic Locking
+Untuk melakukan **Optimistic Locking** cukuplah mudah, kita hanya perlu manambahkan kolom version dan diatotasi dengan `@Version`. Untuk lebih detail nya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#optimistic-locking
+  
+### Pesimistic Locking
+Pada Java Persistence API, ketika kita ingin melakukan Pesimistic locking maka kita akan berinteraksi secara langsung dengan `EntityManager`.  
+
+Lalu gimana dong ketika kita menggunakan Spring Data JPA ??  
+kan pada Spring Data JPA kita nga berinteraksi dengan entity manager secara langsung ???
+  
+Ketika kita menggunakan Spring Data JPA dan kita ingin melakukan Pesimistic Locking maka kita bisa menggunakan annotation [`@Lock`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/Lock.html)
+
+``` java
+@Lock(value = LockModeType.PESSIMISTIC_WRITE)
+public Optional<Address> findById(Long id);
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+    
+    @Test
+    public void testPesimisticLocing1(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            try {
+                Address address = this.addressRepository.findById(getId()).get();
+                address.setProvince("Maluku");
+                Thread.sleep(15_000L);
+                this.addressRepository.save(address);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * method ini akan dipanggil setelah method testPesimisticLocking1 selesai
+     */
+    @Test
+    public void testPesimisticLocing2(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Address address = this.addressRepository.findById(getId()).get();
+            address.setProvince("Aceh");
+            this.addressRepository.save(address);
+        });
+    }
+
+    private Long getId() {
+        return this.addressRepository.findAll().get(0).getId();
+    }
+}
+```
