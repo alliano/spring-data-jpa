@@ -1710,3 +1710,352 @@ public class AddressRepositoryTest {
     }
 }
 ```
+
+# Auditing
+Terdapat 2 cara untuk melakukan audit pada spring data JPA :
+* JPA Audit  
+Detail untuk melakukan Jpa audit bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#entitylistener
+
+* Spring Data
+Ketika kita menggunakan Spring data jpa dan kita ingin melakukan Auditing data caranya cukup mudah, kita hanya perlu melakukan enable Jpa Auditing 
+``` java
+@EnableJpaAuditing // mengaktifkan fitur Spring data audit
+@SpringBootApplication 
+public class SpringDataJpaApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(SpringDataJpaApplication.class, args);
+	}
+}
+```
+Setelah itu kita bisa menambhkan annotation `@EntityListener` dan berikan value `AuditingEntityListener.class` pada Entity yang akan memiliki fitur audit.  
+Setelah itu kita berikan annotation `@LaseModifiedDate` pada field createdAt, `@CreatedDate` pada filed createdAt;
+
+``` java
+@EntityListeners(value = {
+    AuditingEntityListener.class
+})
+@NamedQueries(value = {
+    @NamedQuery(name = "Address.getAddressUsingProvinceName", query = "SELECT a FROM Address AS a WHERE a.province = :province ORDER BY a.id ASC")
+})
+@Builder @Entity @Table(name = "addresses")
+@Setter @Getter @AllArgsConstructor @NoArgsConstructor
+public class Address {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String country;
+    
+    @Column(length = 100, nullable = false)
+    private String province;
+    
+    @Column(length = 100, nullable = false)
+    private String city;
+    
+    @Column(length = 100, nullable = false, name = "postal_code")
+    private String postalCode;
+
+    @OneToOne(mappedBy = "address")
+    private User user;
+
+    @Column(name = "updated_at")
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
+    @Column(name = "created_at")
+    @CreatedDate
+    private LocalDateTime createdAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+}
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testAudit(){
+        Address address = this.addressRepository.findAll().get(0);
+        address.setProvince("Maluku");
+        address.setCity("Ambon");
+        Address result = this.addressRepository.save(address);
+        Assertions.assertNotNull(result.getCreatedAt());
+    }
+}
+```
+
+# Specificaation
+Java Persistence API(JPA) memiliki fitur yang bernama criteria API. criteria API ini memungkinkan kita untuk mengenerate query secara dinamic saat proses runtime, untuk lebih detail nya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#criteria-query  
+  
+Saat bekerja dengan Spring Data Jpa, kita juga bisa menggunakan fitur tersebut(criteria API) dengan menggunakan [`Specification<T>`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/domain/Specification.html)  
+
+Sebelum menggunakan fitur `Specification<T>` Repository yang akan menggunakan fitur specification perlu meng extend [`JpaSpecificationExecutor<T>`](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaSpecificationExecutor.html) setelah itu kita bisa menggunakan fitur specification  
+``` java
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long> , JpaSpecificationExecutor<Address> { }
+```
+
+``` java
+@SpringBootTest(classes = SpringDataJpaApplication.class)
+public class AddressRepositoryTest {
+    
+    private @Autowired AddressRepository addressRepository;
+
+    private @Autowired UserRepository userRepository;
+
+    private @Autowired TransactionOperations transactionOperations;
+
+    @BeforeEach
+    public void setUp(){
+        this.userRepository.deleteAll();
+        this.addressRepository.deleteAll();
+        Address address1 = Address.builder()
+                    .country("Indonesian")
+                    .city("Jakarta")
+                    .province("DKI Jakarta")
+                    .postalCode("00232")
+                    .build();
+        Address address2 = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .province("Moscow")
+                    .postalCode("97574")
+                    .build();
+        Address address3 = Address.builder()
+                    .country("Palestine")
+                    .city("AL-Quds")
+                    .province("Gaza")
+                    .postalCode("11230")
+                    .build();
+        Address address4 = Address.builder()
+                    .country("Yamen")
+                    .city("Yamen")
+                    .province("Yamen")
+                    .postalCode("11203")
+                    .build();
+        this.addressRepository.saveAll(List.of(address1, address2, address3, address4));
+    }
+
+    @Test
+    public void testCriteriaQuery(){
+        // SELECT a FROM Address AS a WHERE a.country = ? OR a.province = ? ORDER BY a.country ASC;
+        // with lambda expression
+        Specification<Address> specification = (root, cirteriaQuery, criteriaBuilder) -> {
+            return cirteriaQuery.where(
+                criteriaBuilder.or(
+                    criteriaBuilder.equal(root.get("country"), "Rusian"),
+                    criteriaBuilder.equal(root.get("province"), "Moscow")
+                )
+            ).orderBy(criteriaBuilder.asc(root.get("country"))).getRestriction();
+        };
+        List<Address> addresses = this.addressRepository.findAll(specification);
+        Assertions.assertEquals(1, addresses.size());
+    }
+}
+```
+# Projection
+ketika kita menggunakan JPA kita bisa melakukan mapping result dari query menjadi class yang kita inginkan, Untuk lebih detailnya bisa kunjungi disini https://github.com/alliano/java-persistence-api-Hibernate?tab=readme-ov-file#constructor-expression
+  
+Untuk melakukan hal tersebut pada Spring Data Jpa kita dapat melakukanya dengan menggunakan fitur yang bernama **Projection**.  
+Untuk mennggunakan fitur projection terapat 3 cara, diantaranya yaitu :
+* **Record**  
+  Pada repository layer kita bisa membuat method dengan return value record yang kita inginkan , misalnya :
+  ``` java
+  public record SimplePaymentResponse(String reciver, Date date) { }
+  ```
+  ``` java
+  @Repository
+  public interface PaymentRepository extends JpaRepository<Payment, String> { 
+
+    public List<SimplePaymentResponse> findByReciverLike(String reciver);
+
+    public List<PaymentnReciverAmount> findByReciverEquals(String reciver);
+  }
+  ```
+  maka secara otomatis spring data jpa akan melakukan mapping result dari query menajdi record yang kita inginkan.
+  ``` java
+  @SpringBootTest(classes = SpringDataJpaApplication.class)
+  public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testProjection1(){
+        List<SimplePaymentResponse> recivers = this.paymentRepository.findByReciverLike("%Abdillah%");
+        Assertions.assertEquals(1, recivers.size());
+    }
+  }
+  ```
+* **Interface**  
+  Cara kedua, Pada repository layer kita bisa membuat method dengan return value interface yang kita inginkan, misalnya :
+  ``` java
+  public interface PaymentnReciverAmount {
+    
+    public String getReciver();
+
+    public Double getAmount();
+  }
+  ```
+  ``` java
+  @Repository
+  public interface PaymentRepository extends JpaRepository<Payment, String> { 
+
+    public List<SimplePaymentResponse> findByReciverLike(String reciver);
+
+    public List<PaymentnReciverAmount> findByReciverEquals(String reciver);
+  }
+  ```
+  maka secara default Spring Data Jpa akan melakukan mapping.
+  ``` java
+  @SpringBootTest(classes = SpringDataJpaApplication.class)
+  public class PaymetServiceTest {
+    
+    private @Autowired PaymentService paymentService;
+
+    private @Autowired PaymentRepository paymentRepository;
+
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-mm-yyyy");
+
+    @BeforeEach
+    public void setUp() throws ParseException{
+        this.paymentRepository.deleteAll();
+        Payment payment1 = Payment.builder()
+                    .amount(10.000d)
+                    .date(simpleDateFormat.parse("10-2-2024"))
+                    .reciver("Abdillah")
+                    .build();
+        Payment payment2 = Payment.builder()
+                    .amount(15.000d)
+                    .date(simpleDateFormat.parse("2-5-2024"))
+                    .reciver("Alli")
+                    .build();
+        Payment payment3 = Payment.builder()
+                    .amount(16.000d)
+                    .date(simpleDateFormat.parse("20-6-2025"))
+                    .reciver("Alliano")
+                    .build();
+        Payment payment4 = Payment.builder()
+                    .amount(30.000d)
+                    .date(simpleDateFormat.parse("6-3-2023"))
+                    .reciver("Allia")
+                    .build();
+        Payment payment5 = Payment.builder()
+                    .amount(40.000d)
+                    .date(simpleDateFormat.parse("11-2-2024"))
+                    .reciver("Azahra")
+                    .build();
+        this.paymentRepository.saveAll(List.of(payment1, payment2, payment3, payment4, payment5));
+    }
+
+    @Test
+    public void testProjection2(){
+        List<PaymentnReciverAmount> recivers = this.paymentRepository.findByReciverEquals("Alli");
+        Assertions.assertTrue(!recivers.isEmpty());
+    }
+  }
+  ```
+  
+  ``` java
+  
+  ```
+* **Jpaql constructor** 
+  Cara yang ketiga, pada repository layer kita bisa membuat method denga retuen value class yang kita inginkan, misalnya : 
+  ``` java
+  @Builder
+  @Setter @Getter @AllArgsConstructor @NoArgsConstructor
+  public class UserDetailResponse {
+    
+    private String username;
+
+    private String country;
+
+    private String city;
+  }
+  ```
+  Maka untuk melakukan query nya, kita bisa menggunakan `@Query` annotation dengan value `SELECT new class`, berikut ini contohnya :  
+  ``` java
+    @Query(
+        name = "find_all_user", 
+        nativeQuery = false, 
+        value = "SELECT DISTINCT" +
+        " new com.spring.data.jpa.springdatajpa.models.UserDetailResponse(u.username, a.country, a.city)" +
+        " FROM User AS u INNER JOIN Address AS a ON (a.user.id = u.address.id)")
+    public Stream<UserDetailResponse> findAllUser();
+  ```
+  Maka Spring Data Jpa akan melakukan mappring berdasarkan constructor.
+
