@@ -1,9 +1,14 @@
 package com.spring.data.jpa.springdatajpa.entities;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+
+import com.spring.data.jpa.springdatajpa.listeners.BaseEntityListener;
+import com.spring.data.jpa.springdatajpa.utils.BaseEntityListenerAware;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,9 +21,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+@EntityListeners(value = {
+    BaseEntityListener.class
+})
 @Builder @Entity @Table(name = "users")
 @Setter @Getter @AllArgsConstructor @NoArgsConstructor
-public class User implements Serializable {
+public class User implements Serializable, BaseEntityListenerAware {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,4 +39,13 @@ public class User implements Serializable {
 
     @OneToOne(fetch = FetchType.EAGER)
     private Address address;
+
+    @Column(name = "created_at")
+    public LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

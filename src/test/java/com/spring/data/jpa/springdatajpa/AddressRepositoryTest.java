@@ -4,22 +4,29 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.support.TransactionOperations;
 
 import com.spring.data.jpa.springdatajpa.entities.Address;
 import com.spring.data.jpa.springdatajpa.repositories.AddressRepository;
 import com.spring.data.jpa.springdatajpa.repositories.UserRepository;
+
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 
 @SpringBootTest(classes = SpringDataJpaApplication.class)
 public class AddressRepositoryTest {
@@ -141,5 +148,101 @@ public class AddressRepositoryTest {
             List<String> province = addressSuplier.get().map(c -> c.getProvince()).collect(Collectors.toList());
             Assertions.assertEquals("DKI Jakarta", province.getFirst());
         });
+    }
+
+    @Test
+    public void testPesimisticLocing1(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            try {
+                Address address = this.addressRepository.findById(getId()).get();
+                address.setProvince("Maluku");
+                Thread.sleep(15_000L);
+                this.addressRepository.save(address);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * method ini akan dipanggil setelah method testPesimisticLocking1 selesai
+     */
+    @Test
+    public void testPesimisticLocing2(){
+        this.transactionOperations.executeWithoutResult(transactionStatus -> {
+            Address address = this.addressRepository.findById(getId()).get();
+            address.setProvince("Aceh");
+            this.addressRepository.save(address);
+        });
+    }
+
+    private Long getId() {
+        return this.addressRepository.findAll().get(0).getId();
+    }
+
+    @Test
+    public void testAudit(){
+        Address address = this.addressRepository.findAll().get(0);
+        address.setProvince("Maluku");
+        address.setCity("Ambon");
+        Address result = this.addressRepository.save(address);
+        Assertions.assertNotNull(result.getCreatedAt());
+    }
+
+    @Test
+    public void exampleQuery(){
+        Address address = Address.builder()
+                    .country("Indonesian")
+                    .province("DKI Jakarta")
+                    .build();
+        Example<Address> example = Example.of(address);
+        List<Address> result = this.addressRepository.findAll(example);
+
+        Assertions.assertNotNull(result.size());
+    }
+
+    @Test
+    public void testExampleQuery2(){
+        Address address = Address.builder()
+                    .country("Rusian")
+                    .city("Moscow")
+                    .build();
+        ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnoreCase().withIgnoreNullValues();
+        Example<Address> example = Example.of(address, exampleMatcher);
+        List<Address> addresses = this.addressRepository.findAll(example);
+        Assertions.assertNotNull(addresses.size());
+    }
+
+    @Test
+    public void testCriteriaQuery(){
+        // SELECT a FROM Address AS a WHERE a.country = ? OR a.province = ? ORDER BY a.country ASC;
+        // with lambda expression
+        Specification<Address> specification = (root, cirteriaQuery, criteriaBuilder) -> {
+            return cirteriaQuery.where(
+                criteriaBuilder.or(
+                    criteriaBuilder.equal(root.get("country"), "Rusian"),
+                    criteriaBuilder.equal(root.get("province"), "Moscow")
+                )
+            ).orderBy(criteriaBuilder.asc(root.get("country"))).getRestriction();
+        };
+        List<Address> addresses = this.addressRepository.findAll(specification);
+        Assertions.assertEquals(1, addresses.size());
+        
+
+        // without lambda expresioan
+        Specification<Address> spec = new Specification<Address>() {
+            @Override
+            public Predicate toPredicate(Root<Address> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                return query.where(
+                    criteriaBuilder.or(
+                        criteriaBuilder.equal(root.get("country"), "Indonesian"),
+                        criteriaBuilder.equal(root.get("province"), "Maluku")
+                    )
+                ).orderBy(criteriaBuilder.desc(root.get("country"))).getRestriction();
+            }
+        };
+        List<Address> addressList = this.addressRepository.findAll(spec);
+        Assertions.assertNotNull(addressList.size());
+        Assertions.assertEquals(1, addressList.size());
     }
 }
