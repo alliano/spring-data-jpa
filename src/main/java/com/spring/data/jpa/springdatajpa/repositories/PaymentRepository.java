@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.spring.data.jpa.springdatajpa.entities.Payment;
+import com.spring.data.jpa.springdatajpa.models.PaymentnReciverAmount;
+import com.spring.data.jpa.springdatajpa.models.SimplePaymentResponse;
 
 
 @Repository
@@ -32,4 +34,11 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     public List<Payment> findAllByReciver(String reciver, Pageable pageable);
     
     public Page<Payment> findAll(Pageable pageable);
+
+    public List<SimplePaymentResponse> findByReciverLike(String reciver);
+
+    public List<PaymentnReciverAmount> findByReciverEquals(String reciver);
+
+    // generic projection
+    public <T> List<T> findAllByReciver(String reciver, Class<T> classes);
 }

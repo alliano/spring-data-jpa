@@ -15,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import com.spring.data.jpa.springdatajpa.entities.Payment;
+import com.spring.data.jpa.springdatajpa.models.PaymentnReciverAmount;
+import com.spring.data.jpa.springdatajpa.models.SimplePaymentResponse;
 import com.spring.data.jpa.springdatajpa.repositories.PaymentRepository;
 import com.spring.data.jpa.springdatajpa.services.PaymentService;
 
@@ -119,5 +121,26 @@ public class PaymetServiceTest {
         Assertions.assertEquals(2, pageResult.getContent().size());
         Assertions.assertEquals(3, pageResult.getTotalPages());
         Assertions.assertEquals(5, pageResult.getTotalElements());
+    }
+
+    @Test
+    public void testProjection1(){
+        List<SimplePaymentResponse> recivers = this.paymentRepository.findByReciverLike("%Abdillah%");
+        Assertions.assertEquals(1, recivers.size());
+    }
+
+    @Test
+    public void testProjection2(){
+        List<PaymentnReciverAmount> recivers = this.paymentRepository.findByReciverEquals("Alli");
+        Assertions.assertTrue(!recivers.isEmpty());
+    }
+
+    @Test
+    public void testProjection3(){
+        List<SimplePaymentResponse>  paymentResponseList = this.paymentRepository.findAllByReciver("Abdillah", SimplePaymentResponse.class);
+        Assertions.assertTrue(!paymentResponseList.isEmpty());
+
+        List<PaymentnReciverAmount> paymentReciverAmount = this.paymentRepository.findAllByReciver("Alli", PaymentnReciverAmount.class);
+        Assertions.assertFalse(paymentReciverAmount.isEmpty());
     }
 }
